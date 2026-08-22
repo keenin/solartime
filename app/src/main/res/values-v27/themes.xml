@@ -1,0 +1,19 @@
+<resources>
+    <style name="Theme.SolarTime" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/clock_bg</item>
+        <item name="android:statusBarColor">@color/clock_bg</item>
+        <item name="android:navigationBarColor">@color/clock_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorPrimary">@color/clock_accent</item>
+        <item name="colorPrimaryVariant">@color/clock_bg</item>
+        <item name="colorOnPrimary">@color/clock_bg</item>
+        <item name="colorSecondary">@color/clock_accent</item>
+        <item name="colorOnSecondary">@color/clock_bg</item>
+        <item name="colorSurface">@color/clock_surface</item>
+        <item name="colorOnSurface">@color/clock_solar</item>
+        <item name="android:textColorPrimary">@color/clock_solar</item>
+        <item name="android:textColorSecondary">@color/clock_civil</item>
+        <item name="colorError">@color/clock_warning</item>
+    </style>
+</resources>

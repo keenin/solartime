@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/clock_bg"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true"
+    android:keepScreenOn="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:id="@+id/tvPolarWarning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="12dp"
+            android:text="@string/polar_warning"
+            android:textAllCaps="true"
+            android:textColor="@color/clock_warning"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/tvPermissionBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/banner_bg"
+            android:gravity="center"
+            android:padding="12dp"
+            android:text="@string/location_permission_needed"
+            android:textColor="@color/clock_warning"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:fontFamily="monospace"
+            android:text="@string/label_civil_time"
+            android:textAllCaps="true"
+            android:textColor="@color/clock_muted"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvRegularTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/cd_civil_time"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:textColor="@color/clock_civil"
+            android:textSize="32sp"
+            tools:text="12:00:00.0" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:fontFamily="monospace"
+            android:text="@string/label_solar_time"
+            android:textAllCaps="true"
+            android:textColor="@color/clock_muted"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvSolarClock"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:contentDescription="@string/cd_solar_clock"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:longClickable="true"
+            android:maxLines="1"
+            android:text="@string/solar_clock_placeholder"
+            android:textColor="@color/clock_solar"
+            android:textStyle="bold"
+            app:autoSizeMaxTextSize="56sp"
+            app:autoSizeMinTextSize="24sp"
+            app:autoSizeTextType="uniform"
+            tools:text="12:00:00.0" />
+
+        <TextView
+            android:id="@+id/tvWarpMultiplier"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:fontFamily="monospace"
+            android:textColor="@color/clock_accent"
+            android:textSize="16sp"
+            tools:text="Solar velocity 1.00023x" />
+
+        <TextView
+            android:id="@+id/tvTimeOdometer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="monospace"
+            android:textColor="@color/clock_civil"
+            android:textSize="16sp"
+            tools:text="Equation of time −6.2 min" />
+
+        <TextView
+            android:id="@+id/tvCivilOffset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:textColor="@color/clock_civil"
+            android:textSize="14sp"
+            tools:text="Civil time is 17 min ahead of the sun" />
+
+        <TextView
+            android:id="@+id/tvLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:textColor="@color/clock_muted"
+            android:textSize="14sp"
+            tools:text="37.7749°N  122.4194°W  ±12 m" />
+
+        <com.example.solartime.SunArcView
+            android:id="@+id/sunArc"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/tvSunTimes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:textColor="@color/clock_sun"
+            android:textSize="14sp"
+            tools:text="Rise 06:12    Noon 13:08    Set 20:04" />
+
+        <TextView
+            android:id="@+id/tvEngineStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:fontFamily="monospace"
+            android:textColor="@color/clock_ok"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="Engine: 10 Hz · GPS 0.5 Hz"
+            tools:visibility="visible" />
+
+        <LinearLayout
+            android:id="@+id/manualLocationGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <EditText
+                android:id="@+id/etLatitude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/input_bg"
+                android:hint="@string/hint_latitude"
+                android:importantForAutofill="no"
+                android:inputType="numberDecimal|numberSigned"
+                android:padding="12dp"
+                android:textColor="@color/clock_solar"
+                android:textColorHint="@color/clock_muted" />
+
+            <EditText
+                android:id="@+id/etLongitude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/input_bg"
+                android:hint="@string/hint_longitude"
+                android:importantForAutofill="no"
+                android:inputType="numberDecimal|numberSigned"
+                android:padding="12dp"
+                android:textColor="@color/clock_solar"
+                android:textColorHint="@color/clock_muted" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="end"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnUseGps"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_use_gps"
+                    android:textColor="@color/clock_accent" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnApplyLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_apply_location"
+                    app:backgroundTint="@color/clock_accent"
+                    android:textColor="@color/clock_bg" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
