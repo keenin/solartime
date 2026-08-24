@@ -143,6 +143,10 @@ class MainActivity : AppCompatActivity() {
         binding.tvSolarClock.text = ui.solarTimeText
         binding.tvSolarClock.contentDescription = ui.solarClockContentDescription
         binding.tvWarpMultiplier.text = ui.solarVelocityText
+        binding.tvRunningTotal.text = ui.runningTotalText
+        binding.tvRunningTotal.contentDescription = ui.runningTotalText.ifBlank {
+            getString(R.string.cd_running_total)
+        }
         binding.tvTimeOdometer.text = ui.eotText
         binding.tvCivilOffset.text = ui.civilOffsetText
         binding.tvLocation.text = ui.locationText

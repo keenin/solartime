@@ -26,6 +26,9 @@ and [NOTICE](NOTICE).
 
 - Shows apparent solar time to a tenth of a second
 - Shows how far civil time is ahead of or behind the sun
+- Tracks a running 24-hour total of how much movement has
+  lengthened or shortened the solar day (`+12 min 34 sec` /
+  `-7 min 12 sec`), updated with the live GPS solar-velocity loop
 - Computes Equation of Time (Spencer Fourier form), solar noon,
   sunrise, and sunset
 - Uses GPS (Fused Location Provider) or a manually entered latitude
@@ -56,6 +59,7 @@ the main screen.
 ```
 app/src/main/java/com/example/solartime/
   SolarEngine.kt           solar-time math
+  SolarDayTotal.kt         24-hour civil-minus-solar offset window
   SolarLocationClient.kt   fused location
   SolarViewModel.kt        UI state and refresh loop
   MainActivity.kt          XML Views UI

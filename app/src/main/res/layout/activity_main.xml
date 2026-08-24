@@ -101,6 +101,18 @@
             tools:text="Solar velocity 1.00023x" />
 
         <TextView
+            android:id="@+id/tvRunningTotal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:contentDescription="@string/cd_running_total"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:textColor="@color/clock_accent"
+            android:textSize="16sp"
+            tools:text="24h +12 min 34 sec" />
+
+        <TextView
             android:id="@+id/tvTimeOdometer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -119,7 +131,7 @@
             android:gravity="center"
             android:textColor="@color/clock_civil"
             android:textSize="14sp"
-            tools:text="Civil time is 17 min ahead of the sun" />
+            tools:text="Civil time is 17 min 12 sec ahead of the sun" />
 
         <TextView
             android:id="@+id/tvLocation"

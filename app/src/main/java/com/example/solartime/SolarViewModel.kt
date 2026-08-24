@@ -14,6 +14,7 @@
 package com.example.solartime
 
 import android.app.Application
+import android.content.Context
 import android.location.Location
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
@@ -31,7 +32,14 @@ import kotlin.math.sin
 class SolarViewModel(application: Application) : AndroidViewModel(application) {
 
     private val engine = SolarEngine()
+    private val solarDayTotal = SolarDayTotal()
     private val timeZone: () -> TimeZone = { TimeZone.getDefault() }
+    private var lastPersistAt = 0L
+
+    init {
+        loadSolarDayTotal()
+        lastPersistAt = System.currentTimeMillis()
+    }
 
     enum class LocationStatus {
         NEED_PERMISSION,
@@ -46,6 +54,7 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         val regularTimeText: String,
         val solarTimeText: String,
         val solarVelocityText: String,
+        val runningTotalText: String,
         val eotText: String,
         val civilOffsetText: String,
         val locationText: String,
@@ -183,6 +192,11 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         showDebug.set(!showDebug.get())
     }
 
+    override fun onCleared() {
+        persistSolarDayTotal()
+        super.onCleared()
+    }
+
     fun uiStates(): Flow<UiState> = flow {
         while (true) {
             emit(render(System.currentTimeMillis()))
@@ -219,6 +233,7 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
                 regularTimeText = regularTimeText,
                 solarTimeText = str(R.string.solar_clock_placeholder),
                 solarVelocityText = "",
+                runningTotalText = "",
                 eotText = "",
                 civilOffsetText = "",
                 locationText = locationText,
@@ -251,6 +266,9 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         val data = engine.calculate(loc.latitude, loc.longitude, loc.eastSpeedMps, now)
         val localSeconds = localSecondsOfDay(now, tz)
         val civilDiff = SolarEngine.wrapSignedSeconds(localSeconds - data.solarTimeSeconds)
+        solarDayTotal.record(now, data.longitudeOffsetSeconds)
+        val runningTotalSeconds = solarDayTotal.totalSeconds(now, data.longitudeOffsetSeconds)
+        maybePersistSolarDayTotal(now)
         val debugHz = 1000.0 / UI_PERIOD_MS
         val gpsHz = 1000.0 / gpsIntervalMillis(loc.speedMps)
         val solarText = formatHms(data.solarTimeSeconds, tenths = true)
@@ -259,6 +277,10 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
             regularTimeText = regularTimeText,
             solarTimeText = solarText,
             solarVelocityText = str(R.string.solar_velocity, data.solarVelocity),
+            runningTotalText = str(
+                R.string.running_total,
+                SolarDayTotal.formatSignedMinSec(runningTotalSeconds),
+            ),
             eotText = str(R.string.equation_of_time, data.eotSeconds / 60.0),
             civilOffsetText = civilOffsetMessage(civilDiff),
             locationText = locationFixText(loc),
@@ -318,25 +340,12 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun civilOffsetMessage(diffSeconds: Double): String {
-        if (abs(diffSeconds) < 30.0) return str(R.string.civil_matches)
-        val amount = formatDuration(abs(diffSeconds))
+        if (abs(diffSeconds) < 0.5) return str(R.string.civil_matches)
+        val amount = SolarDayTotal.formatUnsignedMinSec(abs(diffSeconds))
         return if (diffSeconds > 0) {
             str(R.string.civil_ahead, amount)
         } else {
             str(R.string.civil_behind, amount)
-        }
-    }
-
-    private fun formatDuration(seconds: Double): String {
-        val total = seconds.toInt()
-        val h = total / 3600
-        val m = (total % 3600) / 60
-        val s = total % 60
-        return when {
-            h > 0 && m > 0 -> str(R.string.duration_h_m, h, m)
-            h > 0 -> str(R.string.duration_h, h)
-            m > 0 -> str(R.string.duration_m, m)
-            else -> str(R.string.duration_s, s)
         }
     }
 
@@ -408,8 +417,37 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun maybePersistSolarDayTotal(now: Long) {
+        if (now - lastPersistAt < PERSIST_INTERVAL_MS) return
+        lastPersistAt = now
+        persistSolarDayTotal()
+    }
+
+    private fun loadSolarDayTotal() {
+        try {
+            getApplication<Application>().openFileInput(SOLAR_DAY_TOTAL_FILE)
+                .bufferedReader()
+                .use { solarDayTotal.readFrom(it) }
+        } catch (_: Exception) {
+            // First launch or unreadable file: start an empty window.
+        }
+    }
+
+    private fun persistSolarDayTotal() {
+        try {
+            getApplication<Application>()
+                .openFileOutput(SOLAR_DAY_TOTAL_FILE, Context.MODE_PRIVATE)
+                .bufferedWriter()
+                .use { solarDayTotal.writeTo(it) }
+        } catch (_: Exception) {
+            // Persistence is best-effort; the in-memory window still updates.
+        }
+    }
+
     companion object {
         const val UI_PERIOD_MS = 100L
+        const val SOLAR_DAY_TOTAL_FILE = "solar_day_total.csv"
+        const val PERSIST_INTERVAL_MS = 60_000L
 
         fun gpsIntervalMillis(speedMps: Float): Long = when {
             speedMps < 1f -> 2000L
