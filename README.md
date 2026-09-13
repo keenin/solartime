@@ -9,66 +9,36 @@
 >
 > See [NOTICE](NOTICE) for the full authorship statement.
 
-An Android app that displays **apparent solar time** (true solar time)
-for your location: civil clock time adjusted for longitude and the
-Equation of Time, with a live solar-velocity factor as you move east
-or west.
+Android app for **apparent solar time**: civil clock time adjusted
+for longitude and the Equation of Time, with a live solar-velocity
+factor when you move east or west.
 
 ## License
 
-**GNU General Public License version 2 only (GPL-2.0-only)** — the
-same license as the [Linux kernel](https://www.kernel.org/).
-
-This is GPLv2 *only*, not “GPLv2 or later.” See [LICENSE](LICENSE)
-and [NOTICE](NOTICE).
+**GPL-2.0-only** — same license as the [Linux kernel](https://www.kernel.org/),
+not “GPLv2 or later.” See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 ## What it does
 
-- Shows apparent solar time to a tenth of a second
-- Shows how far civil time is ahead of or behind the sun
-- Tracks a running 24-hour total of how much movement has
-  lengthened or shortened the solar day (`+12 min 34 sec` /
-  `-7 min 12 sec`), updated with the live GPS solar-velocity loop
-- Computes Equation of Time (Spencer Fourier form), solar noon,
-  sunrise, and sunset
-- Uses GPS (Fused Location Provider) or a manually entered latitude
-  and longitude
-- Scales the location refresh rate with east–west speed to save
-  battery
-- Dampens the east–west solar-velocity term near the poles, where
-  Earth rotation is negligible
+- Apparent solar time to a tenth of a second, and civil vs sun offset
+- 24-hour running total of how movement lengthened or shortened the solar day
+- Equation of Time (Spencer Fourier), solar noon, sunrise, sunset
+- GPS (Fused Location Provider) or manual latitude/longitude
+- Location refresh scales with east–west speed; polar motion is dampened
 
 ## Building
 
-Requirements: Android Studio (or the Android SDK / JDK 11+) and the
-Gradle wrapper in this tree.
+Android Studio or Android SDK / JDK 11+, plus this tree’s Gradle wrapper.
 
 ```bash
 ./gradlew :app:assembleDebug
 ```
 
-The debug APK is written to `app/build/outputs/apk/debug/`.
+Debug APK: `app/build/outputs/apk/debug/`. Min SDK 24, target SDK 37.
 
-Minimum SDK 24, target SDK 37.
-
-Location permission is optional. Without it, enter coordinates on
-the main screen.
-
-## Layout of the source
-
-```
-app/src/main/java/com/example/solartime/
-  SolarEngine.kt           solar-time math
-  SolarDayTotal.kt         24-hour civil-minus-solar offset window
-  SolarLocationClient.kt   fused location
-  SolarViewModel.kt        UI state and refresh loop
-  MainActivity.kt          XML Views UI
-  SunArcView.kt            sun-altitude arc
-```
+Location permission is optional. Without it, enter coordinates on the main screen.
 
 ## Warranty
 
-This program is distributed in the hope that it will be useful, but
-**without any warranty**; without even the implied warranty of
-merchantability or fitness for a particular purpose. See the GNU
-General Public License for more details.
+Distributed **without any warranty**, including merchantability or
+fitness for a particular purpose. See the GNU General Public License.

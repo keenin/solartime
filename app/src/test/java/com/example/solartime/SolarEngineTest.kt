@@ -1,14 +1,6 @@
 /*
  * Copyright (C) 2026 Keenin Krehbiel
- *
- * THIS FILE WAS WRITTEN ENTIRELY BY ARTIFICIAL INTELLIGENCE (Grok, xAI).
- * No human authored this source code.
- *
- * SPDX-License-Identifier: GPL-2.0-only
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2 of the License.
+ * Written entirely by Grok (xAI). SPDX-License-Identifier: GPL-2.0-only
  */
 
 package com.example.solartime
@@ -56,8 +48,7 @@ class SolarEngineTest {
     @Test
     fun calculate_usesInjectedClock() {
         val t = utcMillis(2024, 6, 21, 0)
-        val engineAtT = SolarEngine(clock = { t })
-        val data = engineAtT.calculate(0.0, 0.0)
+        val data = SolarEngine(clock = { t }).calculate(0.0, 0.0)
         assertEquals(t, data.utcMillis)
     }
 
@@ -69,48 +60,37 @@ class SolarEngineTest {
     }
 
     @Test
-    fun calculate_eastwardTravelIncreasesVelocity() {
-        val t = utcMillis(2024, 3, 20, 12)
-        val rest = engine.calculate(0.0, 0.0, eastSpeedMps = 0.0, utcMillis = t)
-        val east = engine.calculate(0.0, 0.0, eastSpeedMps = 46.51, utcMillis = t)
-        assertEquals(0.1, east.solarVelocity - rest.solarVelocity, 0.002)
-    }
-
-    @Test
-    fun calculate_westwardTravelDecreasesVelocity() {
+    fun calculate_eastWestTravelChangesVelocity() {
         val t = utcMillis(2024, 3, 20, 12)
         val rest = engine.calculate(0.0, 0.0, utcMillis = t)
+        val east = engine.calculate(0.0, 0.0, eastSpeedMps = 46.51, utcMillis = t)
         val west = engine.calculate(0.0, 0.0, eastSpeedMps = -46.51, utcMillis = t)
+        assertEquals(0.1, east.solarVelocity - rest.solarVelocity, 0.002)
         assertEquals(-0.1, west.solarVelocity - rest.solarVelocity, 0.002)
     }
 
     @Test
     fun calculate_equatorEquinoxHasSunriseNearSix() {
         val data = engine.calculate(0.0, 0.0, utcMillis = utcMillis(2024, 3, 20, 12))
-        val sunrise = data.sunriseSolarSeconds
-        val sunset = data.sunsetSolarSeconds
-        assertNotNull(sunrise)
-        assertNotNull(sunset)
-        assertEquals(6 * 3600.0, sunrise!!, 20 * 60.0)
-        assertEquals(18 * 3600.0, sunset!!, 20 * 60.0)
+        assertNotNull(data.sunriseSolarSeconds)
+        assertNotNull(data.sunsetSolarSeconds)
+        assertEquals(6 * 3600.0, data.sunriseSolarSeconds!!, 20 * 60.0)
+        assertEquals(18 * 3600.0, data.sunsetSolarSeconds!!, 20 * 60.0)
         assertTrue(data.sunAltitudeDeg > 50.0)
     }
 
     @Test
-    fun calculate_northPoleInJuneIsPolarDay() {
-        val data = engine.calculate(90.0, 0.0, utcMillis = utcMillis(2024, 6, 21, 12))
-        assertTrue(data.isPolarDay)
-        assertNull(data.sunriseSolarSeconds)
-        assertNull(data.sunsetSolarSeconds)
-        assertTrue(data.isPolarDampened)
-    }
+    fun calculate_northPoleSolsticesArePolarDayAndNight() {
+        val june = engine.calculate(90.0, 0.0, utcMillis = utcMillis(2024, 6, 21, 12))
+        assertTrue(june.isPolarDay)
+        assertNull(june.sunriseSolarSeconds)
+        assertNull(june.sunsetSolarSeconds)
+        assertTrue(june.isPolarDampened)
 
-    @Test
-    fun calculate_northPoleInDecemberIsPolarNight() {
-        val data = engine.calculate(90.0, 0.0, utcMillis = utcMillis(2024, 12, 21, 12))
-        assertTrue(data.isPolarNight)
-        assertNull(data.sunriseSolarSeconds)
-        assertTrue(data.isPolarDampened)
+        val december = engine.calculate(90.0, 0.0, utcMillis = utcMillis(2024, 12, 21, 12))
+        assertTrue(december.isPolarNight)
+        assertNull(december.sunriseSolarSeconds)
+        assertTrue(december.isPolarDampened)
     }
 
     @Test
