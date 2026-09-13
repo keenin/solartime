@@ -19,10 +19,8 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.asin
-import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.tan
 
 class SolarEngine(
     private val clock: () -> Long = { System.currentTimeMillis() },
@@ -36,9 +34,6 @@ class SolarEngine(
         val longitudeOffsetSeconds: Double,
         val solarVelocity: Double,
         val sunAltitudeDeg: Double,
-        /** Degrees clockwise from north. */
-        val sunAzimuthDeg: Double,
-        val solarNoonSolarSeconds: Double,
         val sunriseSolarSeconds: Double?,
         val sunsetSolarSeconds: Double?,
         val solarNoonUtcMillis: Long,
@@ -72,29 +67,17 @@ class SolarEngine(
         val latRad = Math.toRadians(latitude)
         val earthRotationMps = EQUATORIAL_ROTATION_MPS * cos(latRad)
         val polarDampened = abs(latitude) > POLAR_WARNING_LATITUDE || abs(earthRotationMps) <= 1.0
-        val relativeVelocity = if (!polarDampened && abs(earthRotationMps) > 1.0) {
-            eastSpeedMps / earthRotationMps
-        } else {
-            0.0
-        }
+        val relativeVelocity = if (polarDampened) 0.0 else eastSpeedMps / earthRotationMps
         val solarVelocity = 1.0 + eotRate + relativeVelocity
 
         val declination = solarDeclination(gamma)
-        val hourAngleDeg = (solarTimeSeconds - SOLAR_NOON_SECONDS) / SECONDS_PER_DEGREE
-        val (altitudeDeg, azimuthDeg) = altitudeAzimuth(latRad, declination, Math.toRadians(hourAngleDeg))
+        val hourAngleRad = Math.toRadians((solarTimeSeconds - SOLAR_NOON_SECONDS) / SECONDS_PER_DEGREE)
+        val altitudeDeg = altitude(latRad, declination, hourAngleRad)
+        val (sunriseSolar, sunsetSolar, polarDay, polarNight) = sunriseSunset(latRad, declination)
 
-        val (sunriseSolar, sunsetSolar, polarDay, polarNight) =
-            sunriseSunset(latRad, declination)
-
-        val noonUtc = utcMillisForSolarSeconds(
-            utcMillis, utcSecondsOfDay, SOLAR_NOON_SECONDS, longitudeOffsetSeconds, eotSeconds,
+        fun eventUtc(targetSolarSeconds: Double) = utcMillisForSolarSeconds(
+            utcMillis, utcSecondsOfDay, targetSolarSeconds, longitudeOffsetSeconds, eotSeconds,
         )
-        val sunriseUtc = sunriseSolar?.let {
-            utcMillisForSolarSeconds(utcMillis, utcSecondsOfDay, it, longitudeOffsetSeconds, eotSeconds)
-        }
-        val sunsetUtc = sunsetSolar?.let {
-            utcMillisForSolarSeconds(utcMillis, utcSecondsOfDay, it, longitudeOffsetSeconds, eotSeconds)
-        }
 
         return SolarData(
             utcMillis = utcMillis,
@@ -104,13 +87,11 @@ class SolarEngine(
             longitudeOffsetSeconds = longitudeOffsetSeconds,
             solarVelocity = solarVelocity,
             sunAltitudeDeg = altitudeDeg,
-            sunAzimuthDeg = azimuthDeg,
-            solarNoonSolarSeconds = SOLAR_NOON_SECONDS,
             sunriseSolarSeconds = sunriseSolar,
             sunsetSolarSeconds = sunsetSolar,
-            solarNoonUtcMillis = noonUtc,
-            sunriseUtcMillis = sunriseUtc,
-            sunsetUtcMillis = sunsetUtc,
+            solarNoonUtcMillis = eventUtc(SOLAR_NOON_SECONDS),
+            sunriseUtcMillis = sunriseSolar?.let(::eventUtc),
+            sunsetUtcMillis = sunsetSolar?.let(::eventUtc),
             isPolarDay = polarDay,
             isPolarNight = polarNight,
             isPolarDampened = polarDampened,
@@ -130,9 +111,7 @@ class SolarEngine(
                 0.029230 * sin(2.0 * gamma) - 0.081698 * cos(2.0 * gamma)
             )
         val dGammaDt = 2.0 * PI / (365.0 * SECONDS_PER_DAY)
-        val eotSeconds = eotMinutes * 60.0
-        val eotRate = deotMinutesDGamma * dGammaDt * 60.0
-        return eotSeconds to eotRate
+        return eotMinutes * 60.0 to deotMinutesDGamma * dGammaDt * 60.0
     }
 
     private fun solarDeclination(gamma: Double): Double {
@@ -142,21 +121,10 @@ class SolarEngine(
             0.002697 * cos(3.0 * gamma) + 0.00148 * sin(3.0 * gamma)
     }
 
-    private fun altitudeAzimuth(
-        latRad: Double,
-        declination: Double,
-        hourAngleRad: Double,
-    ): Pair<Double, Double> {
+    private fun altitude(latRad: Double, declination: Double, hourAngleRad: Double): Double {
         val sinAlt = sin(latRad) * sin(declination) +
             cos(latRad) * cos(declination) * cos(hourAngleRad)
-        val altitude = Math.toDegrees(asin(sinAlt.coerceIn(-1.0, 1.0)))
-        val azimuth = (Math.toDegrees(
-            atan2(
-                sin(hourAngleRad),
-                cos(hourAngleRad) * sin(latRad) - tan(declination) * cos(latRad),
-            ),
-        ) + 180.0).mod(360.0)
-        return altitude to azimuth
+        return Math.toDegrees(asin(sinAlt.coerceIn(-1.0, 1.0)))
     }
 
     private fun sunriseSunset(
@@ -167,16 +135,11 @@ class SolarEngine(
         val denom = cos(latRad) * cos(declination)
         if (abs(denom) < 1e-12) {
             val alwaysUp = sin(latRad) * sin(declination) - sin(altRef) > 0
-            return if (alwaysUp) {
-                SunriseResult(null, null, polarDay = true, polarNight = false)
-            } else {
-                SunriseResult(null, null, polarDay = false, polarNight = true)
-            }
+            return SunriseResult(null, null, polarDay = alwaysUp, polarNight = !alwaysUp)
         }
         val cosOmega = (sin(altRef) - sin(latRad) * sin(declination)) / denom
-        when {
-            cosOmega < -1.0 -> return SunriseResult(null, null, polarDay = true, polarNight = false)
-            cosOmega > 1.0 -> return SunriseResult(null, null, polarDay = false, polarNight = true)
+        if (cosOmega < -1.0 || cosOmega > 1.0) {
+            return SunriseResult(null, null, polarDay = cosOmega < -1.0, polarNight = cosOmega > 1.0)
         }
         val omegaSeconds = Math.toDegrees(acos(cosOmega.coerceIn(-1.0, 1.0))) * SECONDS_PER_DEGREE
         return SunriseResult(
@@ -203,19 +166,12 @@ class SolarEngine(
         const val POLAR_WARNING_LATITUDE = 85.0
         private const val SUNRISE_ALTITUDE_DEG = -0.833
 
-        fun wrapSeconds(seconds: Double): Double {
-            var wrapped = seconds % SECONDS_PER_DAY
-            if (wrapped < 0) wrapped += SECONDS_PER_DAY
-            return wrapped
-        }
+        fun wrapSeconds(seconds: Double): Double = seconds.mod(SECONDS_PER_DAY)
 
-        fun wrapSignedSeconds(seconds: Double): Double {
-            var wrapped = (seconds + SECONDS_PER_DAY / 2.0) % SECONDS_PER_DAY
-            if (wrapped < 0) wrapped += SECONDS_PER_DAY
-            return wrapped - SECONDS_PER_DAY / 2.0
-        }
+        fun wrapSignedSeconds(seconds: Double): Double =
+            wrapSeconds(seconds + SECONDS_PER_DAY / 2.0) - SECONDS_PER_DAY / 2.0
 
-        fun utcMillisForSolarSeconds(
+        private fun utcMillisForSolarSeconds(
             nowUtcMillis: Long,
             nowUtcSecondsOfDay: Double,
             targetSolarSeconds: Double,

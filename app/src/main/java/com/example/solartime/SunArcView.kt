@@ -29,65 +29,27 @@ class SunArcView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
-    private val nightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        color = 0xFF2A2A2A.toInt()
-        strokeCap = Paint.Cap.ROUND
-    }
-    private val dayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        color = 0xFFFFB300.toInt()
-        strokeCap = Paint.Cap.ROUND
-    }
-    private val horizonPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        color = 0xFF555555.toInt()
-    }
-    private val sunPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = 0xFFFFD54F.toInt()
-    }
-    private val sunNightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = 0x66FFD54F
-    }
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = 0x33FFB300
-    }
+    private fun paint(style: Paint.Style, color: Int, cap: Paint.Cap? = null) =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.style = style
+            this.color = color
+            if (cap != null) strokeCap = cap
+        }
 
+    private val nightPaint = paint(Paint.Style.STROKE, 0xFF2A2A2A.toInt(), Paint.Cap.ROUND)
+    private val dayPaint = paint(Paint.Style.STROKE, 0xFFFFB300.toInt(), Paint.Cap.ROUND)
+    private val horizonPaint = paint(Paint.Style.STROKE, 0xFF555555.toInt())
+    private val sunPaint = paint(Paint.Style.FILL, 0xFFFFD54F.toInt())
+    private val sunNightPaint = paint(Paint.Style.FILL, 0x66FFD54F)
+    private val glowPaint = paint(Paint.Style.FILL, 0x33FFB300)
     private val arcRect = RectF()
 
-    var solarTimeFraction: Float = 0.5f
-        set(value) {
-            field = value
-            invalidate()
-        }
-    var sunriseFraction: Float? = 0.25f
-        set(value) {
-            field = value
-            invalidate()
-        }
-    var sunsetFraction: Float? = 0.75f
-        set(value) {
-            field = value
-            invalidate()
-        }
-    var polarDay: Boolean = false
-        set(value) {
-            field = value
-            invalidate()
-        }
-    var polarNight: Boolean = false
-        set(value) {
-            field = value
-            invalidate()
-        }
-    var sunAltitudeDeg: Double = 0.0
-        set(value) {
-            field = value
-            invalidate()
-        }
+    private var solarTimeFraction = 0.5f
+    private var sunriseFraction: Float? = 0.25f
+    private var sunsetFraction: Float? = 0.75f
+    private var polarDay = false
+    private var polarNight = false
+    private var sunAltitudeDeg = 0.0
 
     fun bind(
         solarTimeFraction: Float,
@@ -105,6 +67,7 @@ class SunArcView @JvmOverloads constructor(
         this.polarNight = polarNight
         this.sunAltitudeDeg = sunAltitudeDeg
         this.contentDescription = contentDescription
+        invalidate()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

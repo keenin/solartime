@@ -92,15 +92,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
-        locationClient?.stop()
-        runningGpsInterval = -1L
+        stopLocationUpdates()
         super.onStop()
     }
 
     override fun onDestroy() {
         polarWarningAnimator?.cancel()
-        locationClient?.stop()
+        stopLocationUpdates()
         super.onDestroy()
+    }
+
+    private fun stopLocationUpdates() {
+        locationClient?.stop()
+        runningGpsInterval = -1L
     }
 
     private fun syncPermission() {
@@ -129,8 +133,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun syncLocationUpdates(ui: SolarViewModel.UiState) {
         if (!ui.trackGps) {
-            locationClient?.stop()
-            runningGpsInterval = -1L
+            stopLocationUpdates()
             return
         }
         if (runningGpsInterval == ui.gpsIntervalMillis) return
@@ -150,7 +153,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvTimeOdometer.text = ui.eotText
         binding.tvCivilOffset.text = ui.civilOffsetText
         binding.tvLocation.text = ui.locationText
-        binding.tvLocation.contentDescription = ui.locationContentDescription
+        binding.tvLocation.contentDescription = ui.locationText
         binding.tvSunTimes.text = ui.sunTimesText
         binding.tvEngineStatus.text = ui.engineStatusText
         binding.tvEngineStatus.isVisible = ui.showEngineStatus
@@ -180,32 +183,22 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.manual_location_invalid, Toast.LENGTH_SHORT).show()
             return
         }
-        runningGpsInterval = -1L
-        locationClient?.stop()
+        stopLocationUpdates()
     }
 
     private fun updatePolarWarning(isPolar: Boolean) {
-        if (isPolar) {
-            if (binding.tvPolarWarning.visibility != View.VISIBLE) {
-                binding.tvPolarWarning.visibility = View.VISIBLE
-                polarWarningAnimator?.cancel()
-                polarWarningAnimator = ObjectAnimator.ofFloat(
-                    binding.tvPolarWarning,
-                    View.ALPHA,
-                    1f,
-                    0.2f,
-                ).apply {
-                    duration = 600
-                    repeatMode = ValueAnimator.REVERSE
-                    repeatCount = ValueAnimator.INFINITE
-                    start()
-                }
-            }
-        } else if (binding.tvPolarWarning.visibility != View.GONE) {
-            binding.tvPolarWarning.visibility = View.GONE
-            polarWarningAnimator?.cancel()
-            polarWarningAnimator = null
-            binding.tvPolarWarning.alpha = 1f
+        val warning = binding.tvPolarWarning
+        if (isPolar == (warning.visibility == View.VISIBLE)) return
+        polarWarningAnimator?.cancel()
+        polarWarningAnimator = null
+        warning.alpha = 1f
+        warning.visibility = if (isPolar) View.VISIBLE else View.GONE
+        if (!isPolar) return
+        polarWarningAnimator = ObjectAnimator.ofFloat(warning, View.ALPHA, 1f, 0.2f).apply {
+            duration = 600
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            start()
         }
     }
 

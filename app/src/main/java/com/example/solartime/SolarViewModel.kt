@@ -31,9 +31,9 @@ import kotlin.math.sin
 
 class SolarViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val app get() = getApplication<Application>()
     private val engine = SolarEngine()
     private val solarDayTotal = SolarDayTotal()
-    private val timeZone: () -> TimeZone = { TimeZone.getDefault() }
     private var lastPersistAt = 0L
 
     init {
@@ -71,13 +71,11 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         val coarseGranted: Boolean,
         val gpsIntervalMillis: Long,
         val sunAltitudeDeg: Double,
-        val sunAzimuthDeg: Double,
         val solarTimeFraction: Float,
         val sunriseFraction: Float?,
         val sunsetFraction: Float?,
         val polarDay: Boolean,
         val polarNight: Boolean,
-        val locationContentDescription: String,
         val solarClockContentDescription: String,
         val sunArcContentDescription: String,
     )
@@ -121,19 +119,19 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         fineGranted.set(false)
         coarseGranted.set(false)
         requestedPermission.set(true)
-        manualEditorOpen.set(true)
-        val current = snapshot.get()
-        if (current.source != LocationStatus.MANUAL) {
-            snapshot.set(current.copy(source = LocationStatus.PERMISSION_DENIED, hasFix = false))
-        }
+        leaveGps(LocationStatus.PERMISSION_DENIED, hasFix = false)
     }
 
     fun onProviderUnavailable() {
         providerUnavailable.set(true)
+        leaveGps(LocationStatus.UNAVAILABLE, hasFix = snapshot.get().hasFix)
+    }
+
+    private fun leaveGps(status: LocationStatus, hasFix: Boolean) {
         manualEditorOpen.set(true)
         val current = snapshot.get()
         if (current.source != LocationStatus.MANUAL) {
-            snapshot.set(current.copy(source = LocationStatus.UNAVAILABLE, hasFix = current.hasFix))
+            snapshot.set(current.copy(source = status, hasFix = hasFix))
         }
     }
 
@@ -164,9 +162,6 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
             LocationSnapshot(
                 latitude = latitude,
                 longitude = longitude,
-                eastSpeedMps = 0.0,
-                speedMps = 0f,
-                accuracyM = null,
                 hasFix = true,
                 source = LocationStatus.MANUAL,
             ),
@@ -208,14 +203,12 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         val loc = snapshot.get()
         val fine = fineGranted.get()
         val coarse = coarseGranted.get()
-        val denied = permissionDenied.get()
-        val unavailable = providerUnavailable.get()
         val gpsAllowed = fine || coarse
         val status = when {
             loc.source == LocationStatus.MANUAL -> LocationStatus.MANUAL
-            !gpsAllowed && denied -> LocationStatus.PERMISSION_DENIED
+            !gpsAllowed && permissionDenied.get() -> LocationStatus.PERMISSION_DENIED
             !gpsAllowed -> LocationStatus.NEED_PERMISSION
-            unavailable && !loc.hasFix -> LocationStatus.UNAVAILABLE
+            providerUnavailable.get() && !loc.hasFix -> LocationStatus.UNAVAILABLE
             loc.hasFix -> LocationStatus.GPS
             else -> LocationStatus.WAITING_FIX
         }
@@ -224,8 +217,9 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
             status == LocationStatus.PERMISSION_DENIED ||
             status == LocationStatus.UNAVAILABLE ||
             manualEditorOpen.get()
-        val tz = timeZone()
-        val regularTimeText = formatLocalTime(now, tz, tenths = true)
+        val tz = TimeZone.getDefault()
+        val (regularTimeText, localSeconds) = civilClock(now, tz)
+        val interval = gpsIntervalMillis(loc.speedMps)
 
         if (!loc.hasFix) {
             val locationText = locationMessage(status)
@@ -249,28 +243,23 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
                 trackGps = trackGps,
                 fineGranted = fine,
                 coarseGranted = coarse,
-                gpsIntervalMillis = gpsIntervalMillis(loc.speedMps),
+                gpsIntervalMillis = interval,
                 sunAltitudeDeg = 0.0,
-                sunAzimuthDeg = 180.0,
                 solarTimeFraction = 0.5f,
                 sunriseFraction = null,
                 sunsetFraction = null,
                 polarDay = false,
                 polarNight = false,
-                locationContentDescription = locationText,
                 solarClockContentDescription = str(R.string.solar_time_unavailable),
                 sunArcContentDescription = "",
             )
         }
 
         val data = engine.calculate(loc.latitude, loc.longitude, loc.eastSpeedMps, now)
-        val localSeconds = localSecondsOfDay(now, tz)
-        val civilDiff = SolarEngine.wrapSignedSeconds(localSeconds - data.solarTimeSeconds)
         solarDayTotal.record(now, data.longitudeOffsetSeconds)
         val runningTotalSeconds = solarDayTotal.totalSeconds(now, data.longitudeOffsetSeconds)
         maybePersistSolarDayTotal(now)
-        val debugHz = 1000.0 / UI_PERIOD_MS
-        val gpsHz = 1000.0 / gpsIntervalMillis(loc.speedMps)
+        val locationText = locationFixText(loc)
         val solarText = formatHms(data.solarTimeSeconds, tenths = true)
 
         return UiState(
@@ -282,10 +271,12 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
                 SolarDayTotal.formatSignedMinSec(runningTotalSeconds),
             ),
             eotText = str(R.string.equation_of_time, data.eotSeconds / 60.0),
-            civilOffsetText = civilOffsetMessage(civilDiff),
-            locationText = locationFixText(loc),
+            civilOffsetText = civilOffsetMessage(
+                SolarEngine.wrapSignedSeconds(localSeconds - data.solarTimeSeconds),
+            ),
+            locationText = locationText,
             sunTimesText = sunTimesText(data, tz),
-            engineStatusText = str(R.string.engine_status, debugHz, gpsHz),
+            engineStatusText = str(R.string.engine_status, 1000.0 / UI_PERIOD_MS, 1000.0 / interval),
             showEngineStatus = showDebug.get(),
             polar = data.isPolarDampened,
             locationStatus = status,
@@ -295,15 +286,13 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
             trackGps = trackGps,
             fineGranted = fine,
             coarseGranted = coarse,
-            gpsIntervalMillis = gpsIntervalMillis(loc.speedMps),
+            gpsIntervalMillis = interval,
             sunAltitudeDeg = data.sunAltitudeDeg,
-            sunAzimuthDeg = data.sunAzimuthDeg,
             solarTimeFraction = (data.solarTimeSeconds / SolarEngine.SECONDS_PER_DAY).toFloat(),
             sunriseFraction = data.sunriseSolarSeconds?.div(SolarEngine.SECONDS_PER_DAY)?.toFloat(),
             sunsetFraction = data.sunsetSolarSeconds?.div(SolarEngine.SECONDS_PER_DAY)?.toFloat(),
             polarDay = data.isPolarDay,
             polarNight = data.isPolarNight,
-            locationContentDescription = locationFixText(loc),
             solarClockContentDescription = str(
                 R.string.solar_time_cd,
                 formatHms(data.solarTimeSeconds, tenths = false),
@@ -364,17 +353,14 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun formatLocalTime(utcMillis: Long, tz: TimeZone, tenths: Boolean): String {
+    private fun civilClock(utcMillis: Long, tz: TimeZone): Pair<String, Double> {
         val calendar = Calendar.getInstance(tz).apply { timeInMillis = utcMillis }
         val h = calendar.get(Calendar.HOUR_OF_DAY)
         val m = calendar.get(Calendar.MINUTE)
         val s = calendar.get(Calendar.SECOND)
-        val ds = calendar.get(Calendar.MILLISECOND) / 100
-        return if (tenths) {
-            String.format(Locale.US, "%02d:%02d:%02d.%d", h, m, s, ds)
-        } else {
-            String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
-        }
+        val ms = calendar.get(Calendar.MILLISECOND)
+        val text = String.format(Locale.US, "%02d:%02d:%02d.%d", h, m, s, ms / 100)
+        return text to (h * 3600.0 + m * 60.0 + s + ms / 1000.0)
     }
 
     private fun formatLocalHm(utcMillis: Long, tz: TimeZone): String {
@@ -401,21 +387,7 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun localSecondsOfDay(utcMillis: Long, tz: TimeZone): Double {
-        val calendar = Calendar.getInstance(tz).apply { timeInMillis = utcMillis }
-        return calendar.get(Calendar.HOUR_OF_DAY) * 3600.0 +
-            calendar.get(Calendar.MINUTE) * 60.0 +
-            calendar.get(Calendar.SECOND) +
-            calendar.get(Calendar.MILLISECOND) / 1000.0
-    }
-
-    private fun str(@StringRes id: Int, vararg args: Any): String {
-        return if (args.isEmpty()) {
-            getApplication<Application>().getString(id)
-        } else {
-            getApplication<Application>().getString(id, *args)
-        }
-    }
+    private fun str(@StringRes id: Int, vararg args: Any): String = app.getString(id, *args)
 
     private fun maybePersistSolarDayTotal(now: Long) {
         if (now - lastPersistAt < PERSIST_INTERVAL_MS) return
@@ -425,9 +397,7 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadSolarDayTotal() {
         try {
-            getApplication<Application>().openFileInput(SOLAR_DAY_TOTAL_FILE)
-                .bufferedReader()
-                .use { solarDayTotal.readFrom(it) }
+            app.openFileInput(SOLAR_DAY_TOTAL_FILE).bufferedReader().use { solarDayTotal.readFrom(it) }
         } catch (_: Exception) {
             // First launch or unreadable file: start an empty window.
         }
@@ -435,8 +405,7 @@ class SolarViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun persistSolarDayTotal() {
         try {
-            getApplication<Application>()
-                .openFileOutput(SOLAR_DAY_TOTAL_FILE, Context.MODE_PRIVATE)
+            app.openFileOutput(SOLAR_DAY_TOTAL_FILE, Context.MODE_PRIVATE)
                 .bufferedWriter()
                 .use { solarDayTotal.writeTo(it) }
         } catch (_: Exception) {
