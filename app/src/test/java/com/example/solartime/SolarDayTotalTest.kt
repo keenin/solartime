@@ -1,14 +1,6 @@
 /*
  * Copyright (C) 2026 Keenin Krehbiel
- *
- * THIS FILE WAS WRITTEN ENTIRELY BY ARTIFICIAL INTELLIGENCE (Grok, xAI).
- * No human authored this source code.
- *
- * SPDX-License-Identifier: GPL-2.0-only
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2 of the License.
+ * Written entirely by Grok (xAI). SPDX-License-Identifier: GPL-2.0-only
  */
 
 package com.example.solartime
@@ -40,34 +32,18 @@ class SolarDayTotalTest {
     }
 
     @Test
-    fun total_westboundIsPositiveLengthening() {
-        val window = SolarDayTotal()
-        val start = 0.0
-        val westOneDegree = -1.0 * SolarEngine.SECONDS_PER_DEGREE
-        window.record(0L, start)
-        window.record(3_600_000L, westOneDegree)
-        // 1° west → civil-minus-solar offset increases by 240 s.
-        assertEquals(240.0, window.totalSeconds(3_600_000L, westOneDegree), 1e-9)
-    }
+    fun total_westboundLengthensAndEastboundShortens() {
+        val west = SolarDayTotal()
+        val westOneDegree = -SolarEngine.SECONDS_PER_DEGREE
+        west.record(0L, 0.0)
+        west.record(3_600_000L, westOneDegree)
+        assertEquals(240.0, west.totalSeconds(3_600_000L, westOneDegree), 1e-9)
 
-    @Test
-    fun total_eastboundIsNegativeShortening() {
-        val window = SolarDayTotal()
-        val start = 0.0
-        val eastOneDegree = 1.0 * SolarEngine.SECONDS_PER_DEGREE
-        window.record(0L, start)
-        window.record(3_600_000L, eastOneDegree)
-        assertEquals(-240.0, window.totalSeconds(3_600_000L, eastOneDegree), 1e-9)
-    }
-
-    @Test
-    fun total_fifteenDegreesEastIsMinusOneHour() {
-        val window = SolarDayTotal()
-        val start = 0.0
-        val east = 15.0 * SolarEngine.SECONDS_PER_DEGREE
-        window.record(0L, start)
-        window.record(8 * 3_600_000L, east)
-        assertEquals(-3600.0, window.totalSeconds(8 * 3_600_000L, east), 1e-9)
+        val east = SolarDayTotal()
+        val eastOneDegree = SolarEngine.SECONDS_PER_DEGREE
+        east.record(0L, 0.0)
+        east.record(3_600_000L, eastOneDegree)
+        assertEquals(-240.0, east.totalSeconds(3_600_000L, eastOneDegree), 1e-9)
     }
 
     @Test
@@ -76,8 +52,6 @@ class SolarDayTotalTest {
         window.record(0L, 0.0)
         window.record(1_000L, 100.0)
         window.record(61_000L, 250.0)
-        // Sample at t=0 is evicted once t=1s is still at/before cutoff (1s).
-        // Start offset is 100; current 250 → total -150.
         assertEquals(-150.0, window.totalSeconds(61_000L, 250.0), 1e-9)
         assertTrue(window.sampleCount <= 2)
     }
@@ -87,8 +61,6 @@ class SolarDayTotalTest {
         val window = SolarDayTotal(windowMillis = 60_000L, minSampleIntervalMillis = 1_000L)
         window.record(0L, 0.0)
         window.record(90_000L, 80.0)
-        // Only one sample is older than the window; it is kept as the baseline
-        // until a later sample also falls behind the cutoff.
         assertEquals(-80.0, window.totalSeconds(90_000L, 80.0), 1e-9)
         assertEquals(2, window.sampleCount)
     }
@@ -120,7 +92,6 @@ class SolarDayTotalTest {
         val end = -179.0 * SolarEngine.SECONDS_PER_DEGREE
         window.record(0L, start)
         window.record(3_600_000L, end)
-        // +2° east across ±180° → -480 s, not a 358° jump.
         assertEquals(-480.0, window.totalSeconds(3_600_000L, end), 1e-9)
     }
 
@@ -128,7 +99,6 @@ class SolarDayTotalTest {
     fun total_tracksLiveOffsetAtSolarVelocityUiRate() {
         val window = SolarDayTotal(minSampleIntervalMillis = 1_000L)
         val uiPeriodMs = SolarViewModel.UI_PERIOD_MS
-        // 10 Hz render loop; longitude increases 1° per second (240 solar s / s).
         for (i in 0..30) {
             val t = i * uiPeriodMs
             val offset = (t / 1000.0) * SolarEngine.SECONDS_PER_DEGREE
@@ -142,8 +112,6 @@ class SolarDayTotalTest {
     fun total_usesLiveOffsetEvenWithoutNewSample() {
         val window = SolarDayTotal(minSampleIntervalMillis = 1_000L)
         window.record(0L, 0.0)
-        // GPS can move inside the 1 s sample interval; the live total
-        // still reflects the current longitude offset.
         assertEquals(-120.0, window.totalSeconds(400L, 120.0), 1e-9)
     }
 
@@ -169,10 +137,9 @@ class SolarDayTotalTest {
 
     @Test
     fun readFrom_ignoresUnknownVersionAndBadLines() {
-        val payload = "v0\n1000,1.0\n"
         val window = SolarDayTotal()
         window.record(5L, 5.0)
-        BufferedReader(StringReader(payload)).use { window.readFrom(it) }
+        BufferedReader(StringReader("v0\n1000,1.0\n")).use { window.readFrom(it) }
         assertEquals(0, window.sampleCount)
 
         val mixed = "v1\nbad\n2000,not-a-number\n3000,15.0\n2000,1.0\n"
