@@ -10,6 +10,4 @@
     <color name="clock_ok">#FF4CAF50</color>
     <color name="clock_sun">#FFFFB300</color>
     <color name="clock_stroke">#FF333333</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
 </resources>

@@ -67,12 +67,7 @@ class SolarDayTotal(
         writer.newLine()
         for (sample in samples) {
             writer.write(
-                String.format(
-                    Locale.US,
-                    "%d,%.6f",
-                    sample.timeMillis,
-                    sample.longitudeOffsetSeconds,
-                ),
+                String.format(Locale.US, "%d,%.6f", sample.timeMillis, sample.longitudeOffsetSeconds),
             )
             writer.newLine()
         }
@@ -114,12 +109,8 @@ class SolarDayTotal(
 
         fun formatSignedMinSec(seconds: Double): String {
             val rounded = roundAwayFromZero(seconds)
+            val (hours, minutes, secs) = absHms(rounded)
             val sign = if (rounded < 0L) "-" else "+"
-            var remaining = abs(rounded)
-            val hours = remaining / 3600L
-            remaining %= 3600L
-            val minutes = remaining / 60L
-            val secs = remaining % 60L
             return if (hours > 0L) {
                 String.format(Locale.US, "%s%d h %d min %02d sec", sign, hours, minutes, secs)
             } else {
@@ -128,16 +119,17 @@ class SolarDayTotal(
         }
 
         fun formatUnsignedMinSec(seconds: Double): String {
-            var remaining = abs(roundAwayFromZero(seconds))
-            val hours = remaining / 3600L
-            remaining %= 3600L
-            val minutes = remaining / 60L
-            val secs = remaining % 60L
+            val (hours, minutes, secs) = absHms(roundAwayFromZero(seconds))
             return when {
                 hours > 0L -> String.format(Locale.US, "%d h %d min %02d sec", hours, minutes, secs)
                 minutes > 0L -> String.format(Locale.US, "%d min %02d sec", minutes, secs)
                 else -> String.format(Locale.US, "%d sec", secs)
             }
+        }
+
+        private fun absHms(rounded: Long): Triple<Long, Long, Long> {
+            val remaining = abs(rounded)
+            return Triple(remaining / 3600L, (remaining % 3600L) / 60L, remaining % 60L)
         }
 
         private fun roundAwayFromZero(seconds: Double): Long {
