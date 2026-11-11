@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+  Copyright (C) 2026 Keenin Krehbiel
+  THIS FILE WAS WRITTEN ENTIRELY BY ARTIFICIAL INTELLIGENCE (Grok, xAI).
+  SPDX-License-Identifier: GPL-2.0-only
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Solar Time">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Solar Time</title>
+  <meta name="description" content="Apparent solar time, the equation of time, and sunrise and sunset for where you are.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="__CSS__">
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <p class="app-name">Solar Time</p>
+      <button type="button" id="settings-button" class="icon-button" aria-expanded="false" aria-controls="settings-drawer">
+        <span class="visually-hidden">Settings</span>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.6.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.58-.23 1.12-.54 1.63-.94l2.39.96c.23.1.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/>
+        </svg>
+      </button>
+    </header>
+
+    <p id="polar-warning" class="polar" hidden>Polar zone — east-west rate dampened</p>
+
+    <button type="button" id="permission-banner" class="banner" hidden>
+      Location permission needed — tap to allow, or enter coordinates
+    </button>
+
+    <main class="clock">
+      <p class="eyebrow">Civil time</p>
+      <p id="civil-time" class="civil-time">--:--:--.-</p>
+
+      <p class="eyebrow">Apparent solar time</p>
+      <p id="solar-time" class="solar-time" aria-label="Solar time unavailable">--:--:--.-</p>
+
+      <p id="solar-velocity" class="stat"></p>
+      <p id="running-total" class="stat" aria-label="24-hour solar day change"></p>
+      <p id="eot" class="stat stat-civil"></p>
+      <p id="civil-offset" class="stat stat-offset"></p>
+
+      <button type="button" id="location" class="location">Waiting for GPS…</button>
+      <canvas id="sun-arc" class="sun-arc" width="360" height="180" hidden></canvas>
+      <p id="sun-times" class="sun-times"></p>
+      <p id="engine-status" class="engine" hidden></p>
+    </main>
+
+    <form id="manual-form" class="manual" hidden>
+      <label>
+        Latitude
+        <input id="latitude" name="latitude" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" placeholder="Latitude">
+      </label>
+      <label>
+        Longitude
+        <input id="longitude" name="longitude" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Longitude">
+      </label>
+      <p id="manual-error" class="error" role="alert"></p>
+      <div class="actions">
+        <button type="button" id="use-location" class="button button-text">Use location</button>
+        <button type="submit" id="apply-location" class="button button-primary">Set location</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="settings-scrim" class="scrim"></div>
+  <aside id="settings-drawer" class="drawer" aria-labelledby="settings-title" aria-hidden="true" inert>
+    <div class="drawer-head">
+      <h2 id="settings-title">Settings</h2>
+      <button type="button" id="settings-close" class="icon-button" aria-label="Close settings">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path fill="currentColor" d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/>
+        </svg>
+      </button>
+    </div>
+    <fieldset class="scale-fieldset">
+      <legend>Text size</legend>
+      <label class="scale-option"><input type="radio" name="text-scale" value="small"> Small</label>
+      <label class="scale-option"><input type="radio" name="text-scale" value="default" checked> Default</label>
+      <label class="scale-option"><input type="radio" name="text-scale" value="large"> Large</label>
+      <label class="scale-option"><input type="radio" name="text-scale" value="xlarge"> Extra large</label>
+    </fieldset>
+    <label class="scale-option engine-toggle">
+      <input type="checkbox" id="show-engine">
+      Show engine rate
+    </label>
+    <p class="settings-note">Coordinates, text size, and the 24-hour movement history stay on this device.</p>
+  </aside>
+
+  <noscript>
+    <p class="noscript">Solar Time needs JavaScript to run the clock. Nothing is sent to a server.</p>
+  </noscript>
+  <script type="module" src="__JS__"></script>
+</body>
+</html>

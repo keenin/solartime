@@ -7,8 +7,10 @@ This entire program was written by artificial intelligence.
   Publisher:  Keenin Krehbiel  https://github.com/keenin
   Year:       2026
 
-No human wrote the application source, layouts, tests, Gradle
-files, or documentation here. A human requested and published it.
+No human wrote the application source or documentation here.
+That includes the Android code (Kotlin, layouts, tests, Gradle)
+and the web app (HTML, CSS, JavaScript, service worker, icons,
+and tests). A human requested and published it.
 
 Released under the GNU General Public License version 2 only
 (GPL-2.0-only) — the same license used by the Linux kernel.
