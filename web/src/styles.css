@@ -408,6 +408,13 @@ a {
   line-height: 1.4;
 }
 
+.web-version {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: max(16px, calc(16px * var(--text-scale)));
+  line-height: 1.4;
+}
+
 .noscript {
   padding: 24px;
   text-align: center;

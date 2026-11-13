@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { build, generateServiceWorker } from '../scripts/build.js';
+import { SERVICE_WORKER_CACHE, WEB_VERSION, WEB_VERSION_LABEL } from '../src/version.js';
 
 test('service worker precaches with cache reload', () => {
   const source = generateServiceWorker({
@@ -42,6 +43,14 @@ test('build fingerprints assets and reloads once on a new worker', () => {
   assert.match(css, /\.drawer\s*\{[^}]*right:\s*0/s);
   assert.match(css, /translateX\(100%\)/);
   assert.match(css, /font-size:\s*max\(16px/);
+  assert.equal(WEB_VERSION, '1.0.0');
+  assert.equal(WEB_VERSION_LABEL, 'Web version 1.0.0');
+  assert.equal(result.cacheName, SERVICE_WORKER_CACHE);
+  assert.equal(result.cacheName, 'solartime-1.0.0');
+  assert.match(worker, /const CACHE = "solartime-1\.0\.0"/);
+  assert.match(entry, /WEB_VERSION = '1\.0\.0'/);
+  assert.match(entry, /Web version \$\{WEB_VERSION\}/);
+  assert.match(html, /id="web-version"/);
   assert.match(worker, /cache:\s*'reload'/);
   assert.match(entry, /controllerchange/);
   assert.match(entry, /if \(refreshing\) return/);

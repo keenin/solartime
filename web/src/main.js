@@ -32,6 +32,7 @@ import {
 } from './storage.js';
 import { drawSunArc } from './sun-arc.js';
 import { registerServiceWorker } from './sw-client.js';
+import { WEB_VERSION_LABEL } from './version.js';
 
 const INVALID_LOCATION = 'Enter latitude −90 to 90 and longitude −180 to 180';
 
@@ -77,7 +78,10 @@ const dom = {
   settingsScrim: document.querySelector('#settings-scrim'),
   settingsClose: document.querySelector('#settings-close'),
   showEngine: document.querySelector('#show-engine'),
+  version: document.querySelector('#web-version'),
 };
+
+dom.version.textContent = WEB_VERSION_LABEL;
 
 applyTextScale(settings.textScale);
 dom.latitude.value = settings.manualLat;

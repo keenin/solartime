@@ -15,6 +15,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { SERVICE_WORKER_CACHE } from '../src/version.js';
 
 const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const srcDir = join(webRoot, 'src');
@@ -95,7 +96,7 @@ export function build({ outDir = join(webRoot, 'dist') } = {}) {
       .filter((url) => url !== '/index.html' && !url.startsWith('/assets/') && !url.startsWith('/_')),
   ];
   const uniquePrecache = [...new Set(precache)].sort();
-  const cacheName = `solartime-${fingerprint(uniquePrecache.join('|'))}`;
+  const cacheName = SERVICE_WORKER_CACHE;
   const worker = generateServiceWorker({ cacheName, assets: uniquePrecache });
   writeFileSync(join(outDir, 'sw.js'), worker);
 
