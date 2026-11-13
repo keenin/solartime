@@ -19,3 +19,5 @@ local.properties
 !debug.keystore
 .navigation/
 .DS_Store
+web/node_modules/
+web/dist/

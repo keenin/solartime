@@ -13,9 +13,9 @@ I keep this here for myself. It was written with AI for something I wanted, not 
 > See [NOTICE](NOTICE) for the full authorship statement.
 
 
-Android app for **apparent solar time**: civil clock time adjusted
-for longitude and the Equation of Time, with a live solar-velocity
-factor when you move east or west.
+Android app, and a web app in `web/`, for **apparent solar time**:
+civil clock time adjusted for longitude and the Equation of Time,
+with a live solar-velocity factor when you move east or west.
 
 
 ## License
@@ -50,6 +50,41 @@ Debug APK: `app/build/outputs/apk/debug/`. Min SDK 24, target SDK 37.
 
 
 Location permission is optional. Without it, enter coordinates on the main screen.
+
+
+## Web
+
+
+Installable static PWA in `web/`. Same apparent-solar-time math as
+the Android app: Spencer’s equation of time, solar noon, sunrise
+and sunset, the civil-time offset, and the 24-hour east–west total.
+The browser’s Geolocation API (`watchPosition`) supplies location,
+or you type latitude and longitude. Refresh speeds up as you move,
+and polar motion is dampened the same way. Coordinates, the movement
+history, and settings stay on the device (localStorage and IndexedDB).
+Nothing is sent to a server.
+
+
+Light and dark follow the system. Text size is in the settings
+drawer, which opens from the same side as its button.
+
+
+```bash
+cd web
+npm test
+npm run build
+```
+
+
+Output is `web/dist`. For Cloudflare Pages, set the root directory
+to `web`, the build command to `npm run build`, and the output
+directory to `dist`.
+
+
+Open the built files with any static server (or install the PWA
+from a phone). The first load caches the app; after that it runs
+offline. **GPL-2.0-only**, same as the Android app. See
+[LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 
 ## Warranty
