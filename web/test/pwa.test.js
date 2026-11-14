@@ -43,12 +43,12 @@ test('build fingerprints assets and reloads once on a new worker', () => {
   assert.match(css, /\.drawer\s*\{[^}]*right:\s*0/s);
   assert.match(css, /translateX\(100%\)/);
   assert.match(css, /font-size:\s*max\(16px/);
-  assert.equal(WEB_VERSION, '1.0.0');
-  assert.equal(WEB_VERSION_LABEL, 'Web version 1.0.0');
+  assert.equal(WEB_VERSION, '1.0.1');
+  assert.equal(WEB_VERSION_LABEL, 'Web version 1.0.1');
   assert.equal(result.cacheName, SERVICE_WORKER_CACHE);
-  assert.equal(result.cacheName, 'solartime-1.0.0');
-  assert.match(worker, /const CACHE = "solartime-1\.0\.0"/);
-  assert.match(entry, /WEB_VERSION = '1\.0\.0'/);
+  assert.equal(result.cacheName, 'solartime-1.0.1');
+  assert.match(worker, /const CACHE = "solartime-1\.0\.1"/);
+  assert.match(entry, /WEB_VERSION = '1\.0\.1'/);
   assert.match(entry, /Web version \$\{WEB_VERSION\}/);
   assert.match(html, /id="web-version"/);
   assert.match(worker, /cache:\s*'reload'/);
@@ -60,6 +60,7 @@ test('build fingerprints assets and reloads once on a new worker', () => {
   const manifest = JSON.parse(readFileSync(join(outDir, 'manifest.webmanifest'), 'utf8'));
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.start_url, '/');
+  assert.equal(manifest.id, '/');
   for (const icon of manifest.icons) {
     assert.equal(existsSync(join(outDir, icon.src.slice(1))), true, icon.src);
   }
@@ -74,4 +75,20 @@ test('build fingerprints assets and reloads once on a new worker', () => {
     });
     assert.equal(checked.status, 0, `${name}\n${checked.stderr}`);
   }
+
+  const headers = readFileSync(join(outDir, '_headers'), 'utf8');
+  assert.equal(headers, readFileSync(new URL('../public/_headers', import.meta.url), 'utf8'));
+  assert.match(headers, /Content-Security-Policy:.*frame-ancestors 'none'/);
+  assert.match(headers, /require-trusted-types-for 'script'/);
+  assert.match(headers, /trusted-types solar-sw/);
+  assert.match(entry, /createPolicy\('solar-sw'/);
+  assert.match(entry, /pathname !== SERVICE_WORKER_URL/);
+  assert.doesNotMatch(headers, /unsafe-inline|unsafe-eval/);
+  assert.match(headers, /X-Frame-Options:\s*DENY/);
+  assert.match(headers, /^ {2}Strict-Transport-Security:\s*max-age=86400$/m);
+  assert.doesNotMatch(headers, /preload|includeSubDomains/);
+  assert.match(headers, /Permissions-Policy:\s*geolocation=\(self\), camera=\(\), microphone=\(\)/);
+  assert.match(headers, /\/sw\.js\n {2}Cache-Control: no-cache/);
+  assert.match(headers, /\/manifest\.webmanifest\n {2}Cache-Control: no-cache/);
+  assert.match(headers, /Content-Type:\s*application\/manifest\+json/);
 });
