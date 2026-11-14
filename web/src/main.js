@@ -429,12 +429,15 @@ function fitSolarClock() {
   const scale = textScaleValue(settings.textScale);
   const key = `${scale}:${width}:${dom.solar.textContent.length}`;
   if (key === fittedKey) return;
-  let size = Math.round(52 * scale);
-  const min = Math.round(28 * scale);
-  dom.solar.style.fontSize = `${size}px`;
-  while (size > min && dom.solar.scrollWidth > width + 1) {
-    size -= 1;
-    dom.solar.style.fontSize = `${size}px`;
+  dom.solar.style.fontSize = '';
+  let size = parseFloat(getComputedStyle(dom.solar).fontSize);
+  if (!Number.isFinite(size)) size = 52 * scale;
+  const min = Math.max(16, 28 * scale);
+  if (dom.solar.scrollWidth > width + 1) {
+    while (size > min && dom.solar.scrollWidth > width + 1) {
+      size -= 1;
+      dom.solar.style.fontSize = `${size}px`;
+    }
   }
   fittedKey = key;
 }
