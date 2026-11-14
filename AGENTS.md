@@ -28,16 +28,3 @@ file (`solartime-` plus `WEB_VERSION`). `web/scripts/build.js` writes
 that name into `web/dist/sw.js`. Bump `WEB_VERSION` only. That bumps
 the drawer text and the cache name together. Do not type a second
 version into `package.json` or into the cache name by hand.
-
-### Android
-
-Any change under `app/` bumps both fields in `defaultConfig` in
-`app/build.gradle.kts`:
-
-- `versionName` — `MAJOR.MINOR.PATCH`
-- `versionCode` — the integer, increased by 1
-
-The values in the tree today are `versionName` `"1.0"` and
-`versionCode` `1`. The next Android change sets a three-part
-`versionName` and a higher `versionCode`. A web-only change does not
-bump these.
