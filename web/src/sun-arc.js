@@ -35,12 +35,14 @@ export function drawSunArc(canvas, state) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
-  const stroke = 6;
-  const pad = stroke + 16;
+  const unit = Math.min(cssWidth, cssHeight);
+  const stroke = Math.max(2, (6 / 180) * unit);
+  const pad = stroke + (16 / 180) * unit;
   const size = Math.min(cssWidth - pad * 2, cssHeight - pad * 2);
   const cx = cssWidth / 2;
   const cy = cssHeight / 2;
   const radius = size / 2;
+  const sunRadius = (10 / 180) * unit;
 
   ctx.lineWidth = stroke;
   ctx.lineCap = 'round';
@@ -49,7 +51,7 @@ export function drawSunArc(canvas, state) {
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = Math.max(1, (1.5 / 180) * unit);
   ctx.lineCap = 'butt';
   ctx.strokeStyle = color('--arc-horizon');
   ctx.beginPath();
@@ -83,7 +85,6 @@ export function drawSunArc(canvas, state) {
   const angleRad = (androidAngle(state.solarTimeFraction) * Math.PI) / 180;
   const sunX = cx + radius * Math.cos(angleRad);
   const sunY = cy + radius * Math.sin(angleRad);
-  const sunRadius = 10;
   const above = state.sunAltitudeDeg > -0.833 || state.polarDay;
   if (above) {
     ctx.fillStyle = color('--arc-glow');

@@ -59,6 +59,7 @@
 
 html {
   height: 100%;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--solar);
   touch-action: manipulation;
@@ -82,18 +83,25 @@ a {
 }
 
 .page {
-  width: min(480px, 100%);
-  margin: 0 auto;
+  container: page / inline-size;
   box-sizing: border-box;
-  padding:
-    calc(8px + env(safe-area-inset-top))
-    calc(20px + env(safe-area-inset-right))
-    calc(28px + env(safe-area-inset-bottom))
-    calc(20px + env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 48rem);
+  min-height: 100dvh;
+  margin-inline: auto;
+  background: var(--bg);
+  padding-block:
+    calc(0.4rem + env(safe-area-inset-top, 0px))
+    calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  padding-inline:
+    calc(1rem + env(safe-area-inset-left, 0px))
+    calc(1rem + env(safe-area-inset-right, 0px));
 }
 
 .topbar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   min-height: 48px;
@@ -102,7 +110,7 @@ a {
 .app-name {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: max(0.8125rem, calc(clamp(0.8125rem, 4.6cqi, 1.125rem) * var(--text-scale)));
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -122,16 +130,25 @@ a {
 }
 
 .clock {
-  container-type: inline-size;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 0;
   text-align: center;
+  gap: clamp(0.15rem, 0.8dvh, 0.55rem);
 }
 
 .eyebrow {
-  margin: 18px 0 0;
+  margin: 0;
   color: var(--muted);
-  font-size: max(13px, calc(13px * var(--text-scale)));
+  font-size: max(0.8125rem, calc(clamp(0.8125rem, 4.2cqi, 1rem) * var(--text-scale)));
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.clock > .eyebrow:not(:first-child) {
+  margin-top: clamp(0.35rem, 1.4dvh, 1rem);
 }
 
 .civil-time,
@@ -144,18 +161,18 @@ a {
 }
 
 .civil-time {
-  margin: 2px 0 0;
+  margin: 0.05rem 0 0;
   color: var(--civil);
-  font-size: calc(32px * var(--text-scale));
+  font-size: calc(clamp(1.35rem, 10.3cqi, 3.35rem) * var(--text-scale));
   line-height: 1.15;
   white-space: nowrap;
 }
 
 .solar-time {
-  margin: 2px 0 0;
+  margin: 0.05rem 0 0;
   min-height: 1.15em;
   color: var(--solar);
-  font-size: calc(52px * var(--text-scale));
+  font-size: calc(clamp(2.25rem, 16.8cqi, 5.5rem) * var(--text-scale));
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.1;
@@ -163,9 +180,9 @@ a {
 }
 
 .stat {
-  margin: 10px 0 0;
+  margin: 0;
   color: var(--accent);
-  font-size: calc(18px * var(--text-scale));
+  font-size: calc(clamp(0.95rem, 5.5cqi, 1.45rem) * var(--text-scale));
   line-height: 1.35;
 }
 
@@ -175,42 +192,63 @@ a {
 }
 
 .stat-offset {
-  font-size: calc(16px * var(--text-scale));
+  font-size: calc(clamp(0.9rem, 5cqi, 1.3rem) * var(--text-scale));
 }
 
 .location {
   display: block;
   width: 100%;
   min-height: 48px;
-  margin: 12px 0 0;
+  margin: 0;
   padding: 8px 4px;
   border: 0;
   background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: max(16px, calc(16px * var(--text-scale)));
+  font-size: max(1rem, calc(clamp(1rem, 4.4cqi, 1.35rem) * var(--text-scale)));
   text-align: center;
+}
+
+.sun-dial {
+  flex: 1 1 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-block-size: 9rem;
+  margin-block: clamp(0.15rem, 0.8dvh, 0.5rem);
+  container-type: size;
+}
+
+.sun-dial:not(:has(#sun-arc:not([hidden]))) {
+  display: none;
 }
 
 .sun-arc {
   display: block;
-  width: 100%;
-  height: 180px;
-  margin-top: 4px;
+  width: min(100%, 70dvh);
+  aspect-ratio: 1;
+  height: auto;
+  margin: 0;
   touch-action: manipulation;
+}
+
+@supports (width: 1cqi) {
+  .sun-arc {
+    width: min(100cqi, 100cqb);
+  }
 }
 
 .sun-times {
   margin: 0;
   color: var(--sun);
-  font-size: max(16px, calc(16px * var(--text-scale)));
+  font-size: max(1rem, calc(clamp(1rem, 4.4cqi, 1.35rem) * var(--text-scale)));
   line-height: 1.4;
 }
 
 .engine {
-  margin: 16px 0 0;
+  margin: 0;
   color: var(--ok);
-  font-size: calc(13px * var(--text-scale));
+  font-size: calc(clamp(0.75rem, 3.4cqi, 1rem) * var(--text-scale));
 }
 
 .polar {
@@ -250,6 +288,7 @@ a {
 
 .manual {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 8px;
   margin-top: 20px;
