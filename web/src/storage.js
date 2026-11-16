@@ -11,10 +11,18 @@
  * the Free Software Foundation; version 2 of the License.
  */
 
+import { isValidLatitude, isValidLongitude } from './location-policy.js';
+
 const SETTINGS_KEY = 'solartime.settings';
 const DAY_TOTAL_KEY = 'dayTotal.csv';
 const DB_NAME = 'solartime';
 const STORE = 'kv';
+
+/** Last accepted GPS fix. Separate from settings so a GPS write does not rewrite them. */
+export const LAST_FIX_KEY = 'solartime.lastFix';
+
+/** Minimum gap between localStorage writes of the last GPS fix. */
+export const LAST_FIX_PERSIST_MS = 30_000;
 
 export const TEXT_SCALES = [
   { id: 'small', label: 'Small', value: 0.85 },
@@ -53,6 +61,74 @@ export function saveSettings(settings) {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(normalizeSettings(settings)));
   } catch {
     // Private mode can reject storage. The clock still runs.
+  }
+}
+
+/**
+ * Accept a stored or incoming fix. `lat`/`lon` is the on-disk shape;
+ * `latitude`/`longitude` is the in-memory shape.
+ */
+export function normalizeLastFix(value) {
+  if (!value || typeof value !== 'object') return null;
+  const latitude = numberOrNull(value.lat ?? value.latitude);
+  const longitude = numberOrNull(value.lon ?? value.longitude);
+  if (latitude == null || longitude == null) return null;
+  if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) return null;
+  const timestamp = numberOrNull(value.timestamp);
+  if (timestamp == null || timestamp <= 0) return null;
+  let accuracy = value.accuracy ?? value.accuracyM;
+  if (accuracy == null || accuracy === '') {
+    accuracy = null;
+  } else {
+    accuracy = numberOrNull(accuracy);
+    if (accuracy == null || accuracy < 0) accuracy = null;
+  }
+  return { latitude, longitude, accuracy, timestamp };
+}
+
+export function loadLastFix(storage = browserStorage()) {
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(LAST_FIX_KEY);
+    if (!raw) return null;
+    return normalizeLastFix(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastFix(fix, storage = browserStorage()) {
+  if (!storage) return false;
+  const normalized = normalizeLastFix(fix);
+  if (!normalized) return false;
+  try {
+    storage.setItem(LAST_FIX_KEY, JSON.stringify({
+      lat: normalized.latitude,
+      lon: normalized.longitude,
+      accuracy: normalized.accuracy,
+      timestamp: normalized.timestamp,
+    }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function numberOrNull(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function browserStorage() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage;
+  } catch {
+    return null;
   }
 }
 

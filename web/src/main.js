@@ -13,19 +13,31 @@
 
 import { SolarEngine } from './solar-engine.js';
 import { SolarDayTotal } from './solar-day-total.js';
-import { emptyLocation, PERSIST_INTERVAL_MS, renderView, UI_PERIOD_MS } from './present.js';
 import {
+  chooseBootLocation,
+  emptyLocation,
+  PERSIST_INTERVAL_MS,
+  renderView,
+  UI_PERIOD_MS,
+} from './present.js';
+import {
+  COARSE_POSITION_OPTIONS,
+  coarseFixBlocked,
   eastSpeedFromFix,
   gpsIntervalMillis,
   isValidLatitude,
   isValidLongitude,
   parseCoordinate,
   shouldAcceptFix,
+  shouldRequestCoarseFix,
 } from './location-policy.js';
 import {
+  LAST_FIX_PERSIST_MS,
   loadDayTotalCsv,
+  loadLastFix,
   loadSettings,
   saveDayTotalCsv,
+  saveLastFix,
   saveSettings,
   TEXT_SCALES,
   textScaleValue,
@@ -51,9 +63,14 @@ const pendingWindow = new SolarDayTotal();
 let lastAcceptedFix = 0;
 let watchId = null;
 let watchInterval = null;
+let coarseRequested = false;
+let lastFixPersistAt = 0;
+let persistableFix = null;
+let fittedScale = null;
+let fittedLength = -1;
+let fittedWidth = 0;
 let wakeLock = null;
 let holdTimer = 0;
-let fittedKey = '';
 
 const dom = {
   polar: document.querySelector('#polar-warning'),
@@ -91,14 +108,18 @@ for (const input of document.querySelectorAll('input[name="text-scale"]')) {
   input.checked = input.value === settings.textScale;
 }
 
+let manual = null;
 if (settings.mode === 'manual') {
   const latitude = parseCoordinate(settings.manualLat);
   const longitude = parseCoordinate(settings.manualLon);
   if (latitude != null && longitude != null && isValidLatitude(latitude) && isValidLongitude(longitude)) {
-    location = manualLocation(latitude, longitude);
+    manual = manualLocation(latitude, longitude);
     manualEditorOpen = true;
   }
 }
+const booted = chooseBootLocation({ manual, saved: loadLastFix() });
+location = booted.location;
+lastGps = booted.lastGps;
 
 dom.banner.addEventListener('click', () => {
   beginDeviceLocation();
@@ -157,24 +178,31 @@ document.addEventListener('pointerdown', () => {
 }, { once: true });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') requestWakeLock();
-  if (document.visibilityState === 'hidden') persistDayTotal();
+  if (document.visibilityState === 'hidden') {
+    persistDayTotal();
+    flushLastFix();
+  }
 });
-window.addEventListener('pagehide', () => persistDayTotal());
+window.addEventListener('pagehide', () => {
+  persistDayTotal();
+  flushLastFix();
+});
 
 syncThemeColor();
 window.addEventListener('resize', () => {
-  fittedKey = '';
+  fittedScale = null;
+  fittedLength = -1;
+  fittedWidth = 0;
   fitSolarClock();
 });
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncThemeColor);
 
-registerServiceWorker();
 boot();
 
 function boot() {
   window.setInterval(render, UI_PERIOD_MS);
   render();
-  resolvePermission().then(() => loadDayTotalCsv()).then((csv) => {
+  loadDayTotalCsv().then((csv) => {
     if (csv) dayTotal.readFrom(csv);
   }).catch(() => {
     // History is optional. The clock still runs.
@@ -183,6 +211,10 @@ function boot() {
     lastPersistAt = Date.now();
     render();
   });
+  resolvePermission().finally(() => {
+    render();
+  });
+  registerServiceWorker();
 }
 
 async function resolvePermission() {
@@ -245,8 +277,10 @@ function paint(view) {
   dom.solar.textContent = view.solarTimeText;
   dom.solar.setAttribute('aria-label', view.solarClockContentDescription);
   dom.velocity.textContent = view.solarVelocityText;
-  dom.running.textContent = view.runningTotalText;
-  dom.running.setAttribute('aria-label', view.runningTotalText || '24-hour solar day change');
+  if (historyReady) {
+    dom.running.textContent = view.runningTotalText;
+    dom.running.setAttribute('aria-label', view.runningTotalText || '24-hour solar day change');
+  }
   dom.eot.textContent = view.eotText;
   dom.offset.textContent = view.civilOffsetText;
   dom.location.textContent = view.locationText;
@@ -272,6 +306,7 @@ function syncLocationUpdates(view) {
     return;
   }
   startWatch(view.gpsIntervalMillis);
+  startCoarseFix();
 }
 
 function startWatch(intervalMs) {
@@ -296,6 +331,21 @@ function stopWatch() {
   watchInterval = null;
 }
 
+function startCoarseFix() {
+  if (!navigator.geolocation || coarseFixBlocked(location)) return;
+  if (!shouldRequestCoarseFix({
+    permission,
+    alreadyRequested: coarseRequested,
+    manual: location.source === 'manual',
+  })) return;
+  coarseRequested = true;
+  try {
+    navigator.geolocation.getCurrentPosition(onCoarseFix, () => {}, COARSE_POSITION_OPTIONS);
+  } catch {
+    coarseRequested = false;
+  }
+}
+
 function onFix(position) {
   const speed = Number.isFinite(position.coords.speed) ? position.coords.speed : 0;
   const nextInterval = gpsIntervalMillis(speed);
@@ -305,19 +355,45 @@ function onFix(position) {
     return;
   }
   lastAcceptedFix = timestamp;
+  commitFix(position, {
+    speedMps: speed,
+    eastSpeedMps: eastSpeedFromFix(position.coords.speed, position.coords.heading),
+    coarse: false,
+    timestamp,
+  });
+}
+
+function onCoarseFix(position) {
+  if (!position?.coords || coarseFixBlocked(location)) return;
+  const { latitude, longitude } = position.coords;
+  if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) return;
+  // Leave lastAcceptedFix alone so the high-accuracy watch still supersedes this.
+  commitFix(position, {
+    speedMps: 0,
+    eastSpeedMps: 0,
+    coarse: true,
+    timestamp: position.timestamp || Date.now(),
+  });
+}
+
+function commitFix(position, { speedMps, eastSpeedMps, coarse, timestamp }) {
   providerUnavailable = false;
   permission = 'granted';
   const fix = {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
-    eastSpeedMps: eastSpeedFromFix(position.coords.speed, position.coords.heading),
-    speedMps: speed,
+    eastSpeedMps,
+    speedMps,
     accuracyM: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
     hasFix: true,
     source: 'gps',
+    stale: false,
+    coarse,
+    timestamp,
   };
   lastGps = fix;
   if (location.source !== 'manual') location = fix;
+  rememberFix(fix);
   render();
 }
 
@@ -420,26 +496,38 @@ function closeSettings() {
 
 function applyTextScale(id) {
   document.documentElement.style.setProperty('--text-scale', String(textScaleValue(id)));
-  fittedKey = '';
+  fittedScale = null;
+  fittedLength = -1;
+  fittedWidth = 0;
 }
 
 function fitSolarClock() {
+  const scale = textScaleValue(settings.textScale);
+  const length = dom.solar.textContent.length;
   const width = dom.solar.clientWidth;
   if (!width) return;
-  const scale = textScaleValue(settings.textScale);
-  const key = `${scale}:${width}:${dom.solar.textContent.length}`;
-  if (key === fittedKey) return;
+  if (fittedScale === scale && fittedLength === length && fittedWidth === width) return;
   dom.solar.style.fontSize = '';
   let size = parseFloat(getComputedStyle(dom.solar).fontSize);
   if (!Number.isFinite(size)) size = 52 * scale;
   const min = Math.max(16, 28 * scale);
-  if (dom.solar.scrollWidth > width + 1) {
-    while (size > min && dom.solar.scrollWidth > width + 1) {
-      size -= 1;
+  const overflows = () => dom.solar.scrollWidth > width + 1;
+  if (overflows()) {
+    const span = dom.solar.scrollWidth;
+    if (span > 0) {
+      size = Math.max(min, Math.floor((size * width) / span));
       dom.solar.style.fontSize = `${size}px`;
     }
+    let guard = 0;
+    while (overflows() && size > min && guard < 4) {
+      size -= 1;
+      dom.solar.style.fontSize = `${size}px`;
+      guard += 1;
+    }
   }
-  fittedKey = key;
+  fittedScale = scale;
+  fittedLength = length;
+  fittedWidth = width;
 }
 
 function syncThemeColor() {
@@ -457,6 +545,27 @@ function maybePersist(now) {
   if (now - lastPersistAt < PERSIST_INTERVAL_MS) return;
   lastPersistAt = now;
   persistDayTotal();
+}
+
+function rememberFix(fix) {
+  const replacingCoarse = persistableFix?.coarse === true && !fix.coarse;
+  persistableFix = {
+    lat: fix.latitude,
+    lon: fix.longitude,
+    accuracy: fix.accuracyM,
+    timestamp: Number.isFinite(fix.timestamp) ? fix.timestamp : Date.now(),
+    coarse: Boolean(fix.coarse),
+  };
+  const now = Date.now();
+  if (!replacingCoarse && !shouldAcceptFix(lastFixPersistAt, now, LAST_FIX_PERSIST_MS)) return;
+  lastFixPersistAt = now;
+  saveLastFix(persistableFix);
+}
+
+function flushLastFix() {
+  if (!persistableFix) return;
+  saveLastFix(persistableFix);
+  lastFixPersistAt = Date.now();
 }
 
 function persistDayTotal() {

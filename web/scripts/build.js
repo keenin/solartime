@@ -79,9 +79,13 @@ export function build({ outDir = join(webRoot, 'dist') } = {}) {
   const cssName = `styles.${cssHash}.css`;
   writeFileSync(join(outDir, 'assets', cssName), cssSource);
 
+  const preloads = modules.urls
+    .map((url) => `<link rel="modulepreload" href="${url}">`)
+    .join('\n  ');
   const html = readFileSync(join(srcDir, 'index.html'), 'utf8')
     .replaceAll('__CSS__', `/assets/${cssName}`)
-    .replaceAll('__JS__', `/assets/${modules.entry}`);
+    .replaceAll('__JS__', `/assets/${modules.entry}`)
+    .replace('<!-- __PRELOADS__ -->', preloads);
   writeFileSync(join(outDir, 'index.html'), html);
 
   copyPublic(publicDir, outDir);

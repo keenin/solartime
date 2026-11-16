@@ -16,6 +16,34 @@
  * Canvas 0° is 3 o'clock and positive sweep is clockwise, same as Android.
  */
 
+const ARC_VARS = [
+  '--arc-night',
+  '--arc-horizon',
+  '--arc-day',
+  '--arc-glow',
+  '--arc-sun',
+  '--arc-sun-night',
+];
+let arcPalette = null;
+let arcPaletteScheme = '';
+
+function paletteFor(canvas) {
+  let scheme = 'light';
+  try {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) scheme = 'dark';
+  } catch {
+    scheme = '';
+  }
+  if (!arcPalette || arcPaletteScheme !== scheme) {
+    const styles = getComputedStyle(canvas);
+    const next = {};
+    for (const name of ARC_VARS) next[name] = styles.getPropertyValue(name).trim();
+    arcPalette = next;
+    arcPaletteScheme = scheme;
+  }
+  return arcPalette;
+}
+
 export function drawSunArc(canvas, state) {
   const cssWidth = canvas.clientWidth;
   const cssHeight = canvas.clientHeight;
@@ -30,8 +58,8 @@ export function drawSunArc(canvas, state) {
   }
 
   const ctx = canvas.getContext('2d');
-  const styles = getComputedStyle(canvas);
-  const color = (name) => styles.getPropertyValue(name).trim();
+  const palette = paletteFor(canvas);
+  const color = (name) => palette[name];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
