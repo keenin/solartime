@@ -13,15 +13,23 @@
 
 import { wrapSeconds } from './solar-engine.js';
 
+const numberFormats = new Map();
+
 /** Java Formatter half-up (half away from zero), Locale.US, no grouping. */
 export function formatFixed(value, digits, { signed = false } = {}) {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-    useGrouping: false,
-    roundingMode: 'halfExpand',
-    signDisplay: signed ? 'always' : 'auto',
-  }).format(value);
+  const key = `${digits}:${signed ? 1 : 0}`;
+  let format = numberFormats.get(key);
+  if (!format) {
+    format = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+      useGrouping: false,
+      roundingMode: 'halfExpand',
+      signDisplay: signed ? 'always' : 'auto',
+    });
+    numberFormats.set(key, format);
+  }
+  return format.format(value);
 }
 
 function roundAwayFromZero(seconds) {
@@ -116,15 +124,23 @@ export function sunTimesText(data, timeZone) {
   return `Noon ${noon}`;
 }
 
+const dateFormats = new Map();
+
 function zonedParts(date, timeZone) {
-  const options = {
-    hourCycle: 'h23',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  };
-  if (timeZone) options.timeZone = timeZone;
-  const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(date);
+  const key = timeZone || '';
+  let format = dateFormats.get(key);
+  if (!format) {
+    const options = {
+      hourCycle: 'h23',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    };
+    if (timeZone) options.timeZone = timeZone;
+    format = new Intl.DateTimeFormat('en-US', options);
+    dateFormats.set(key, format);
+  }
+  const parts = format.formatToParts(date);
   const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   let hour = map.hour === '24' ? '00' : map.hour;
   hour = pad2(Number(hour));

@@ -97,14 +97,19 @@ export class SolarDayTotal {
   }
 }
 
+let offsetFormat = null;
+
 function formatOffset(value) {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 6,
-    maximumFractionDigits: 6,
-    useGrouping: false,
-    roundingMode: 'halfExpand',
-    signDisplay: 'auto',
-  }).format(value);
+  if (!offsetFormat) {
+    offsetFormat = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 6,
+      useGrouping: false,
+      roundingMode: 'halfExpand',
+      signDisplay: 'auto',
+    });
+  }
+  return offsetFormat.format(value);
 }
 
 function parseLong(text) {

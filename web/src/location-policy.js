@@ -34,6 +34,41 @@ export function shouldAcceptFix(lastAcceptedMs, nowMs, intervalMs) {
   return nowMs - lastAcceptedMs >= intervalMs;
 }
 
+/**
+ * One-shot network/cached lookup. maximumAge lets a recent device fix
+ * return immediately; enableHighAccuracy stays false so this call does
+ * not ask for precise location on its own.
+ */
+export const COARSE_POSITION_OPTIONS = Object.freeze({
+  enableHighAccuracy: false,
+  maximumAge: 10 * 60 * 1000,
+  timeout: 10_000,
+});
+
+/**
+ * The high-accuracy watch is the only call allowed to raise the
+ * permission prompt. The coarse lookup starts once permission is
+ * already granted, in parallel with that watch.
+ */
+export function shouldRequestCoarseFix({ permission, alreadyRequested, manual }) {
+  if (alreadyRequested || manual) return false;
+  return permission === 'granted';
+}
+
+/**
+ * A live high-accuracy sample is already on screen. A later coarse
+ * result must not replace it. Stale and coarse samples still can.
+ */
+export function coarseFixBlocked(location) {
+  return Boolean(
+    location &&
+    location.hasFix &&
+    location.source === 'gps' &&
+    !location.stale &&
+    !location.coarse
+  );
+}
+
 const LATITUDE_RE = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
 const LONGITUDE_RE = LATITUDE_RE;
 

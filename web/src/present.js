@@ -22,6 +22,7 @@ import {
   sunTimesText,
 } from './format.js';
 import { gpsIntervalMillis } from './location-policy.js';
+import { normalizeLastFix } from './storage.js';
 
 export const UI_PERIOD_MS = 100;
 export const PERSIST_INTERVAL_MS = 60_000;
@@ -116,7 +117,7 @@ export function renderView({
     polarNight: data.isPolarNight,
     solarClockContentDescription: `Apparent solar time ${formatHms(data.solarTimeSeconds, false)}`,
     sunArcContentDescription: `Sun altitude ${formatFixed(data.sunAltitudeDeg, 0)} degrees`,
-    showSunArc: status === 'gps' || status === 'manual',
+    showSunArc: status === 'gps' || status === 'manual' || status === 'stale',
   };
 }
 
@@ -124,6 +125,9 @@ function locationStatus(location, permission, providerUnavailable, gpsAllowed) {
   if (location.source === 'manual') return 'manual';
   if (!gpsAllowed && permission === 'denied') return 'denied';
   if (permission === 'unsupported') return 'unavailable';
+  // A saved fix can paint before the permission query returns. Denied
+  // and unsupported still fall through so the banner and manual entry stay.
+  if (location.stale && location.hasFix) return 'stale';
   if (!gpsAllowed) return 'need';
   if (providerUnavailable && !location.hasFix) return 'unavailable';
   if (location.hasFix) return 'gps';
@@ -142,10 +146,45 @@ function locationMessage(status) {
 function locationFixText(location) {
   const pair = formatCoordinatePair(location.latitude, location.longitude);
   if (location.source === 'manual') return `Manual ${pair}`;
+  if (location.stale) {
+    if (location.accuracyM != null) {
+      return `Last known (stale) ${pair}  ±${formatFixed(location.accuracyM, 0)} m`;
+    }
+    return `Last known (stale) ${pair}`;
+  }
   if (location.accuracyM != null) {
     return `${pair}  ±${formatFixed(location.accuracyM, 0)} m`;
   }
   return pair;
+}
+
+/** Saved GPS sample used until a fresh fix arrives. Speed is unknown, so it stays 0. */
+export function locationFromSavedFix(saved) {
+  const fix = normalizeLastFix(saved);
+  if (!fix) return null;
+  return {
+    latitude: fix.latitude,
+    longitude: fix.longitude,
+    eastSpeedMps: 0,
+    speedMps: 0,
+    accuracyM: fix.accuracy,
+    hasFix: true,
+    source: 'gps',
+    stale: true,
+    coarse: false,
+    timestamp: fix.timestamp,
+  };
+}
+
+/**
+ * Manual coordinates win. Otherwise the saved fix is the initial
+ * location and the sample "Use location" can return to.
+ */
+export function chooseBootLocation({ manual = null, saved = null } = {}) {
+  const savedLocation = locationFromSavedFix(saved);
+  if (manual) return { location: manual, lastGps: savedLocation };
+  if (savedLocation) return { location: savedLocation, lastGps: savedLocation };
+  return { location: emptyLocation(), lastGps: null };
 }
 
 export function emptyLocation() {
