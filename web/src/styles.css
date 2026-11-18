@@ -155,6 +155,8 @@ a {
 .solar-time,
 .stat,
 .sun-times,
+.daylight,
+.daylight-change,
 .engine,
 .location {
   font-variant-numeric: tabular-nums;
@@ -181,9 +183,11 @@ a {
 
 .stat {
   margin: 0;
+  min-inline-size: 0;
   color: var(--accent);
   font-size: calc(clamp(0.95rem, 5.5cqi, 1.45rem) * var(--text-scale));
   line-height: 1.35;
+  text-wrap: balance;
 }
 
 .stat-civil,
@@ -240,9 +244,29 @@ a {
 
 .sun-times {
   margin: 0;
+  min-inline-size: 0;
   color: var(--sun);
   font-size: max(1rem, calc(clamp(1rem, 4.4cqi, 1.35rem) * var(--text-scale)));
   line-height: 1.4;
+  text-wrap: balance;
+}
+
+.daylight {
+  margin: 0;
+  min-inline-size: 0;
+  color: var(--sun);
+  font-size: max(1rem, calc(clamp(1rem, 4cqi, 1.25rem) * var(--text-scale)));
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+.daylight-change {
+  margin: 0;
+  min-inline-size: 0;
+  color: var(--muted);
+  font-size: max(0.875rem, calc(clamp(0.875rem, 3.6cqi, 1.05rem) * var(--text-scale)));
+  line-height: 1.35;
+  text-wrap: balance;
 }
 
 .engine {

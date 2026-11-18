@@ -96,6 +96,8 @@ test('calculate equator equinox has sunrise near six', () => {
   assert.ok(Math.abs(data.sunriseSolarSeconds - 6 * 3600) <= 20 * 60);
   assert.ok(Math.abs(data.sunsetSolarSeconds - 18 * 3600) <= 20 * 60);
   assert.ok(data.sunAltitudeDeg > 50);
+  assert.equal(data.daylightSeconds, data.sunsetSolarSeconds - data.sunriseSolarSeconds);
+  assert.equal(data.darknessSeconds, 86400 - data.daylightSeconds);
 });
 
 test('calculate north pole solstices are polar day and night', () => {
@@ -103,11 +105,15 @@ test('calculate north pole solstices are polar day and night', () => {
   assert.equal(june.isPolarDay, true);
   assert.equal(june.sunriseSolarSeconds, null);
   assert.equal(june.sunsetSolarSeconds, null);
+  assert.equal(june.daylightSeconds, 86400);
+  assert.equal(june.darknessSeconds, 0);
   assert.equal(june.isPolarDampened, true);
 
   const december = engine.calculate(90, 0, 0, utcMillis(2024, 12, 21, 12));
   assert.equal(december.isPolarNight, true);
   assert.equal(december.sunriseSolarSeconds, null);
+  assert.equal(december.daylightSeconds, 0);
+  assert.equal(december.darknessSeconds, 86400);
   assert.equal(december.isPolarDampened, true);
 });
 

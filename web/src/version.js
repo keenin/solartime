@@ -16,7 +16,7 @@
  * The settings drawer and the service worker cache name both read it.
  * See AGENTS.md.
  */
-export const WEB_VERSION = '1.0.4';
+export const WEB_VERSION = '1.1.0';
 
 export const WEB_VERSION_LABEL = `Web version ${WEB_VERSION}`;
 
