@@ -11,7 +11,7 @@
  * the Free Software Foundation; version 2 of the License.
  */
 
-import { wrapSeconds } from './solar-engine.js';
+import { SECONDS_PER_DAY, wrapSeconds } from './solar-engine.js';
 
 const numberFormats = new Map();
 
@@ -61,6 +61,48 @@ export function formatUnsignedMinSec(seconds) {
   if (hours > 0) return `${hours} h ${minutes} min ${secText} sec`;
   if (minutes > 0) return `${minutes} min ${secText} sec`;
   return `${secs} sec`;
+}
+
+/** Length of the solar day over the 24-hour movement window: 86400 + offset. */
+export function formatSolarDayLength(offsetSeconds) {
+  const total = roundAwayFromZero(SECONDS_PER_DAY + offsetSeconds);
+  const sign = total < 0 ? '−' : '';
+  const { hours, minutes, secs } = absHms(total);
+  return `Solar day ${sign}${hours}h ${pad2(minutes)}m ${pad2(secs)}s`;
+}
+
+const MINUTES_PER_DAY = SECONDS_PER_DAY / 60;
+
+function formatHoursMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${pad2(minutes)}m`;
+}
+
+/** Today's daylight and darkness, rounded so the two parts add to 24h. */
+export function daylightDarknessText(data) {
+  if (data == null || data.daylightSeconds == null) return '';
+  if (data.isPolarDay) return 'Daylight 24h · Darkness 0h';
+  if (data.isPolarNight) return 'Daylight 0h · Darkness 24h';
+  const daylightMinutes = Math.round(data.daylightSeconds / 60);
+  if (daylightMinutes >= MINUTES_PER_DAY) return 'Daylight 24h · Darkness 0h';
+  if (daylightMinutes <= 0) return 'Daylight 0h · Darkness 24h';
+  const darknessMinutes = MINUTES_PER_DAY - daylightMinutes;
+  return `Daylight ${formatHoursMinutes(daylightMinutes)} · Darkness ${formatHoursMinutes(darknessMinutes)}`;
+}
+
+/** Change in daylight versus the same place 24 hours earlier. Empty when it rounds to zero. */
+export function formatDaylightChange(deltaSeconds) {
+  const rounded = roundAwayFromZero(deltaSeconds);
+  if (rounded === 0) return '';
+  const sign = rounded < 0 ? '−' : '+';
+  const abs = Math.abs(rounded);
+  const hours = Math.floor(abs / 3600);
+  const minutes = Math.floor((abs % 3600) / 60);
+  const secs = abs % 60;
+  if (hours > 0) return `${sign}${hours}h ${minutes}m ${pad2(secs)}s vs yesterday`;
+  if (minutes > 0) return `${sign}${minutes}m ${pad2(secs)}s vs yesterday`;
+  return `${sign}${secs}s vs yesterday`;
 }
 
 export function formatHms(seconds, tenths) {

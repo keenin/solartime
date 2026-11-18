@@ -105,6 +105,35 @@ function sunriseSunset(latRad, declination) {
   };
 }
 
+/**
+ * Daylight is sunset minus sunrise in solar seconds (sunrise at −0.833°).
+ * Darkness is the rest of the mean solar day. A negative difference has
+ * wrapped past midnight, so a day is added back.
+ */
+export function daylightDarknessSeconds(sun) {
+  const polarDay = sun.isPolarDay === true || sun.polarDay === true;
+  const polarNight = sun.isPolarNight === true || sun.polarNight === true;
+  if (polarDay) {
+    return { daylightSeconds: SECONDS_PER_DAY, darknessSeconds: 0 };
+  }
+  if (polarNight) {
+    return { daylightSeconds: 0, darknessSeconds: SECONDS_PER_DAY };
+  }
+  if (sun.sunriseSolarSeconds == null || sun.sunsetSolarSeconds == null) {
+    return { daylightSeconds: null, darknessSeconds: null };
+  }
+  let daylightSeconds = sun.sunsetSolarSeconds - sun.sunriseSolarSeconds;
+  if (daylightSeconds < 0) daylightSeconds += SECONDS_PER_DAY;
+  // cos(ω) = −1 wraps both events to solar midnight; the sun is up all day.
+  if (daylightSeconds === 0 && sun.sunriseSolarSeconds === 0) {
+    daylightSeconds = SECONDS_PER_DAY;
+  }
+  return {
+    daylightSeconds,
+    darknessSeconds: SECONDS_PER_DAY - daylightSeconds,
+  };
+}
+
 function utcMillisForSolarSeconds(
   nowUtcMillis,
   nowUtcSecondsOfDay,
@@ -156,6 +185,7 @@ export class SolarEngine {
     const hourAngleRad = toRadians((solarTimeSeconds - SOLAR_NOON_SECONDS) / SECONDS_PER_DEGREE);
     const altitudeDeg = altitude(latRad, declination, hourAngleRad);
     const sun = sunriseSunset(latRad, declination);
+    const lengths = daylightDarknessSeconds(sun);
 
     const eventUtc = (targetSolarSeconds) => utcMillisForSolarSeconds(
       utcMillis,
@@ -175,6 +205,8 @@ export class SolarEngine {
       sunAltitudeDeg: altitudeDeg,
       sunriseSolarSeconds: sun.sunriseSolarSeconds,
       sunsetSolarSeconds: sun.sunsetSolarSeconds,
+      daylightSeconds: lengths.daylightSeconds,
+      darknessSeconds: lengths.darknessSeconds,
       solarNoonUtcMillis: eventUtc(SOLAR_NOON_SECONDS),
       sunriseUtcMillis: sun.sunriseSolarSeconds == null ? null : eventUtc(sun.sunriseSolarSeconds),
       sunsetUtcMillis: sun.sunsetSolarSeconds == null ? null : eventUtc(sun.sunsetSolarSeconds),

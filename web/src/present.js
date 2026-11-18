@@ -15,10 +15,12 @@ import { SECONDS_PER_DAY, SolarEngine, wrapSignedSeconds } from './solar-engine.
 import {
   civilClock,
   civilOffsetMessage,
+  daylightDarknessText,
   formatCoordinatePair,
+  formatDaylightChange,
   formatFixed,
   formatHms,
-  formatSignedMinSec,
+  formatSolarDayLength,
   sunTimesText,
 } from './format.js';
 import { gpsIntervalMillis } from './location-policy.js';
@@ -65,6 +67,8 @@ export function renderView({
       civilOffsetText: '',
       locationText: locationMessage(status),
       sunTimesText: '',
+      daylightText: '',
+      daylightChangeText: '',
       engineStatusText: 'Engine: waiting',
       showEngineStatus: showDebug,
       polar: false,
@@ -95,11 +99,13 @@ export function renderView({
     regularTimeText,
     solarTimeText: solarText,
     solarVelocityText: `Solar velocity ${formatFixed(data.solarVelocity, 5)}x`,
-    runningTotalText: `24h ${formatSignedMinSec(runningTotalSeconds)}`,
+    runningTotalText: formatSolarDayLength(runningTotalSeconds),
     eotText: `Equation of time ${formatFixed(data.eotSeconds / 60, 1, { signed: true })} min`,
     civilOffsetText: civilOffsetMessage(wrapSignedSeconds(localSeconds - data.solarTimeSeconds)),
     locationText: locationFixText(location),
     sunTimesText: sunTimesText(data, timeZone),
+    daylightText: daylightDarknessText(data),
+    daylightChangeText: daylightChangeVersusYesterday(engine, location, now, data),
     engineStatusText: `Engine: ${formatFixed(1000 / UI_PERIOD_MS, 0)} Hz · GPS ${formatFixed(1000 / interval, 1)} Hz`,
     showEngineStatus: showDebug,
     polar: data.isPolarDampened,
@@ -119,6 +125,18 @@ export function renderView({
     sunArcContentDescription: `Sun altitude ${formatFixed(data.sunAltitudeDeg, 0)} degrees`,
     showSunArc: status === 'gps' || status === 'manual' || status === 'stale',
   };
+}
+
+function daylightChangeVersusYesterday(engine, location, now, today) {
+  if (today.daylightSeconds == null) return '';
+  const yesterday = engine.calculate(
+    location.latitude,
+    location.longitude,
+    0,
+    now - SECONDS_PER_DAY * 1000,
+  );
+  if (yesterday.daylightSeconds == null) return '';
+  return formatDaylightChange(today.daylightSeconds - yesterday.daylightSeconds);
 }
 
 function locationStatus(location, permission, providerUnavailable, gpsAllowed) {

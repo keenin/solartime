@@ -33,7 +33,9 @@ test('apparent solar time shows tenths and the civil offset', () => {
   assert.equal(view.solarTimeText, '11:52:08.5');
   assert.equal(view.eotText, 'Equation of time -7.9 min');
   assert.equal(view.solarVelocityText, 'Solar velocity 1.00021x');
-  assert.equal(view.runningTotalText, '24h +0 min 00 sec');
+  assert.equal(view.runningTotalText, 'Solar day 24h 00m 00s');
+  assert.match(view.daylightText, /^Daylight \d+h \d{2}m · Darkness \d+h \d{2}m$/);
+  assert.equal(view.daylightText, 'Daylight 12h 07m · Darkness 11h 53m');
   assert.match(view.civilOffsetText, /^Civil time is .+ ahead of the sun$/);
   assert.equal(
     view.sunTimesText,
@@ -60,7 +62,7 @@ test('one degree west lengthens the 24 hour total by four minutes', () => {
     engine,
     timeZone: 'UTC',
   });
-  assert.equal(later.runningTotalText, '24h +4 min 00 sec');
+  assert.equal(later.runningTotalText, 'Solar day 24h 04m 00s');
   assert.equal(later.locationText, 'Manual 0.0000°N  1.0000°W');
 });
 
@@ -76,6 +78,9 @@ test('los angeles civil clock follows the time zone', () => {
   });
   assert.equal(view.regularTimeText, '05:00:00.1');
   assert.equal(view.solarTimeText, '--:--:--.-');
+  assert.equal(view.daylightText, '');
+  assert.equal(view.daylightChangeText, '');
+  assert.equal(view.runningTotalText, '');
   assert.equal(view.showPermissionBanner, true);
   assert.equal(view.trackGps, true);
 });
@@ -102,6 +107,8 @@ test('polar zone warns and drops the eastward rate', () => {
   assert.equal(view.locationText, '89.9000°N  0.0000°E  ±8 m');
   assert.equal(view.gpsIntervalMillis, 200);
   assert.match(view.sunTimesText, /^Sun up all day/);
+  assert.equal(view.daylightText, 'Daylight 24h · Darkness 0h');
+  assert.equal(view.daylightChangeText, '');
 });
 
 test('east speed uses heading and missing values stay zero', () => {

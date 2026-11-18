@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-title" content="Solar Time">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Solar Time</title>
-  <meta name="description" content="Apparent solar time, the equation of time, and sunrise and sunset for where you are.">
+  <meta name="description" content="Apparent solar time, the equation of time, and sunrise, sunset, daylight, and darkness for where you are.">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -49,7 +49,7 @@
       <p id="solar-time" class="solar-time" aria-label="Solar time unavailable">--:--:--.-</p>
 
       <p id="solar-velocity" class="stat"></p>
-      <p id="running-total" class="stat" aria-label="24-hour solar day change"></p>
+      <p id="running-total" class="stat" aria-label="Solar day length"></p>
       <p id="eot" class="stat stat-civil"></p>
       <p id="civil-offset" class="stat stat-offset"></p>
 
@@ -58,6 +58,8 @@
         <canvas id="sun-arc" class="sun-arc" width="360" height="180" hidden></canvas>
       </div>
       <p id="sun-times" class="sun-times"></p>
+      <p id="daylight" class="daylight" hidden></p>
+      <p id="daylight-change" class="daylight-change" hidden></p>
       <p id="engine-status" class="engine" hidden></p>
     </main>
 

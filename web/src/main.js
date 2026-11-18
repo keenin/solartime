@@ -84,6 +84,8 @@ const dom = {
   location: document.querySelector('#location'),
   arc: document.querySelector('#sun-arc'),
   sunTimes: document.querySelector('#sun-times'),
+  daylight: document.querySelector('#daylight'),
+  daylightChange: document.querySelector('#daylight-change'),
   engine: document.querySelector('#engine-status'),
   manual: document.querySelector('#manual-form'),
   latitude: document.querySelector('#latitude'),
@@ -279,12 +281,16 @@ function paint(view) {
   dom.velocity.textContent = view.solarVelocityText;
   if (historyReady) {
     dom.running.textContent = view.runningTotalText;
-    dom.running.setAttribute('aria-label', view.runningTotalText || '24-hour solar day change');
+    dom.running.setAttribute('aria-label', view.runningTotalText || 'Solar day length');
   }
   dom.eot.textContent = view.eotText;
   dom.offset.textContent = view.civilOffsetText;
   dom.location.textContent = view.locationText;
   dom.sunTimes.textContent = view.sunTimesText;
+  dom.daylight.textContent = view.daylightText;
+  dom.daylight.hidden = view.daylightText === '';
+  dom.daylightChange.textContent = view.daylightChangeText;
+  dom.daylightChange.hidden = view.daylightChangeText === '';
   dom.engine.textContent = view.engineStatusText;
   dom.engine.hidden = !view.showEngineStatus;
   dom.polar.hidden = !view.polar;
